@@ -1,0 +1,24 @@
+# One-shot model-conversion image. Uses Python 3.11 (the host NUC runs Python
+# 3.14, which has no PyTorch/optimum wheels yet) so conversion is reproducible
+# and never touches the host Python. Run via scripts/prepare_models.sh.
+FROM python:3.11-slim
+
+ENV DEBIAN_FRONTEND=noninteractive PIP_NO_CACHE_DIR=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        git libgl1 libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Conversion tooling: optimum-intel drives the OpenVINO export + INT4 weight
+# compression (via nncf); ultralytics exports YOLO to OpenVINO IR.
+# CLIP (+ ftfy/regex) is required by YOLO-World's set_classes() to build the
+# open-vocabulary text embeddings that get baked into the exported model.
+RUN pip install \
+        "optimum-intel[openvino]" \
+        openvino openvino-genai nncf \
+        ultralytics \
+        ftfy regex \
+        git+https://github.com/ultralytics/CLIP.git
+
+WORKDIR /out
+ENTRYPOINT ["/bin/bash", "-lc"]

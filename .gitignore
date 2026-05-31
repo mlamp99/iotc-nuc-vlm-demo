@@ -1,0 +1,35 @@
+# --- Secrets: NEVER commit -------------------------------------------------
+# Device cert + private key + iotcDeviceConfig.json live here.
+credentials/*
+!credentials/README.md
+.env
+
+# --- Large generated artifacts (rebuilt via scripts) -----------------------
+# Converted OpenVINO models (run scripts/prepare_models.sh to regenerate).
+models/
+# Image tarball + staged bundle (run scripts/build-and-save.sh to regenerate).
+ship/
+# OpenVINO GPU compile cache.
+.ov_cache/
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+
+# --- Python ----------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+.venv-prep/
+*.egg-info/
+
+# --- OS / editor -----------------------------------------------------------
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/
+
+# Claude Code local config
+.claude/

@@ -1,0 +1,38 @@
+# Runs the demo with Intel GPU + NPU + camera passed through from the host.
+#
+# Device notes:
+#   /dev/dri    -> Intel Arc iGPU (OpenVINO GPU target)
+#   /dev/accel  -> Intel NPU / AI Boost (OpenVINO NPU target)
+#   /dev/video0 -> USB camera (change index in .env if needed)
+#
+# The render/video group IDs differ between machines. Set RENDER_GID and
+# VIDEO_GID in .env (host-setup.sh prints them) so the container can open the
+# devices. Defaults below match typical Ubuntu installs.
+services:
+  physical-ai:
+    image: physical-ai-demo:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: physical-ai
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "${MJPEG_PORT:-8080}:8080"
+    devices:
+      - "/dev/dri:/dev/dri"
+      - "/dev/accel:/dev/accel"
+      - "/dev/video0:/dev/video0"
+    group_add:
+      - "${RENDER_GID:-993}"   # render group (GPU)
+      - "${VIDEO_GID:-44}"     # video group (camera)
+    volumes:
+      # Credentials mounted at runtime — never baked into the image.
+      - ./credentials:/app/credentials:ro
+      # Optional: persist the OpenVINO model compile cache between runs for
+      # faster startup.
+      - ./.ov_cache:/app/.ov_cache
+    environment:
+      - OV_CACHE_DIR=/app/.ov_cache
+      - YOLO_CONFIG_DIR=/tmp/Ultralytics

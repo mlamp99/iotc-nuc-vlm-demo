@@ -1,0 +1,22 @@
+# Ubuntu Core override. Use with:
+#   CORE_WORKDIR=$HOME/physical-ai \
+#   docker compose -f docker-compose.yml -f docker-compose.core.yml up -d
+#
+# Confined Docker (the `docker` snap) can only bind-mount from snap-allowed
+# paths ($HOME via the `home` interface, or /media via `removable-media`), so all
+# writable state moves under CORE_WORKDIR (default ~/physical-ai). `.env` is made
+# optional here since the app has sensible baked-in defaults.
+#
+# `!override` replaces the base list entirely (instead of compose's default
+# append), so the classic ./relative mounts/env_file do not also apply.
+services:
+  physical-ai:
+    env_file: !override
+      - path: ${CORE_WORKDIR:-${HOME}/physical-ai}/.env
+        required: false
+    volumes: !override
+      - "${CORE_WORKDIR:-${HOME}/physical-ai}/credentials:/app/credentials:ro"
+      - "${CORE_WORKDIR:-${HOME}/physical-ai}/.ov_cache:/app/.ov_cache"
+    environment:
+      - OV_CACHE_DIR=/app/.ov_cache
+      - YOLO_CONFIG_DIR=/tmp/Ultralytics

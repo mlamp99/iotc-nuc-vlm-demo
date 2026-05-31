@@ -1,0 +1,15 @@
+credentials/
+.env
+.ov_cache/
+.git/
+__pycache__/
+*.pyc
+*.tar
+*.zip
+ship/
+# model-prep scratch/caches — never bake these into the image
+models/.cache/
+models/.config/
+models/.local/
+models/intel/
+models/*.pt
