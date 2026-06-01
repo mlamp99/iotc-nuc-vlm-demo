@@ -193,25 +193,34 @@ docker compose build
    *(Prefer to build it by hand? Create Template → Authentication Type =
    Self-Signed Certificate → add every attribute and command from the tables in
    [section 6](#6-telemetry--commands); names are case-sensitive.)*
-3. **Create the device:** **Devices → Create Device**. Enter a **Unique ID**
-   (e.g. `nuc-vlm-01`), select the template you just made, and choose
-   **Self-Signed Certificate**.
-4. **Get a certificate + key.** Either let /IOTCONNECT generate them for you to
-   download, **or** make your own in the terminal and upload the `.crt`:
-   ```bash
-   openssl req -x509 -newkey rsa:2048 -nodes -days 3650 \
-     -keyout nuc-vlm-01.pem -out nuc-vlm-01.crt -subj "/CN=nuc-vlm-01"
-   ```
-5. **Download `iotcDeviceConfig.json`** from the device's **Info / Connection**
-   panel.
+3. **Create the device:** **Devices → Create Device**. Enter a **Unique Id** and
+   **Device Name**, pick your **Entity**, select the **Template** you imported,
+   and set **Device certificate = Auto-generated (recommended)**. Click
+   **Save & View**.
+
+   ![Create device](docs/images/iotc-create-device.png)
+
+4. **Download `iotcDeviceConfig.json`.** On the device's **Info** page, click the
+   **document-with-gear icon** in the top-right corner — it downloads the
+   `iotcDeviceConfig.json` file.
+
+   ![Download device config](docs/images/iotc-download-config.png)
+
+5. **Download the certificate + key.** On the same Info page click
+   **Connection Info** (right side), then click the **certificate icon** (top-right
+   of the dialog) to download your device **certificate** and **private key**.
+
+   ![Download certificates](docs/images/iotc-connection-info.png)
 
 ### Step 8 — Put the credentials on the NUC
-Copy the **three** files into the `credentials/` folder (the filenames don't
-matter — they're detected automatically):
+You should now have **three files**: `iotcDeviceConfig.json`, the device
+certificate (`.crt`/`.pem`), and the private key (`.pem`). Copy all three into the
+`credentials/` folder (the filenames don't matter — they're detected
+automatically):
 ```bash
 cp /path/to/iotcDeviceConfig.json  credentials/
-cp /path/to/nuc-vlm-01.crt         credentials/
-cp /path/to/nuc-vlm-01.pem         credentials/
+cp /path/to/<device>.crt           credentials/
+cp /path/to/<device>.pem           credentials/
 ```
 > Each physical NUC needs its **own** /IOTCONNECT device + its own certificate.
 > Don't reuse one device's credentials on another unit.
