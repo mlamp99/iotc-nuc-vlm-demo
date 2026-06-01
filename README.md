@@ -139,6 +139,22 @@ Import [`dashboards/nuc-vlm-dashboard.json`](dashboards/) — see
 
 ## 4. Build & run the device
 
+### Quick start — pull the prebuilt image (skip the build)
+A prebuilt public image is published to GitHub Container Registry, so a device
+can skip steps 4–5 (model conversion + build) entirely:
+```bash
+git clone https://github.com/mlamp99/iotc-nuc-vlm-demo.git && cd iotc-nuc-vlm-demo
+sudo bash scripts/install-docker.sh         # then: newgrp docker
+sudo bash scripts/host-setup.sh             # Intel GPU/NPU drivers; note the GIDs
+cp .env.example .env                         # set RENDER_GID / VIDEO_GID / CAMERA_SOURCE
+# pull the image and tag it the name compose expects:
+docker pull ghcr.io/mlamp99/physical-ai-demo:latest
+docker tag  ghcr.io/mlamp99/physical-ai-demo:latest physical-ai-demo:latest
+# put your IOTCONNECT files in ./credentials, then:
+docker compose up -d                         # http://<device-ip>:8080
+```
+Otherwise, build from source with Option A or B below.
+
 ### Option A — Ubuntu Desktop / Server (recommended)
 *(Tested: NUC16 Panther Lake, Ubuntu 26.04 Desktop.)*
 
