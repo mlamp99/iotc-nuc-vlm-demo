@@ -1,0 +1,59 @@
+{
+    "code": "NUCvlm",
+    "name": "Intel NUC VLM",
+    "authType": 2,
+    "attributes": [
+        { "name": "fps", "displayName": "", "type": "DECIMAL", "description": "Detector frame rate", "unit": "", "aggregateTypes": [] },
+        { "name": "object_count", "displayName": "", "type": "INTEGER", "description": "Total objects detected this frame", "unit": "", "aggregateTypes": [] },
+        { "name": "person_count", "displayName": "", "type": "INTEGER", "description": "People detected", "unit": "", "aggregateTypes": [] },
+        { "name": "person_present", "displayName": "", "type": "STRING", "description": "Any person in view (true/false)", "unit": "", "aggregateTypes": [] },
+        { "name": "hardhat_count", "displayName": "", "type": "INTEGER", "description": "Hard hats detected", "unit": "", "aggregateTypes": [] },
+        { "name": "no_hardhat_count", "displayName": "", "type": "INTEGER", "description": "Workers without a hard hat", "unit": "", "aggregateTypes": [] },
+        { "name": "vest_count", "displayName": "", "type": "INTEGER", "description": "Safety vests detected", "unit": "", "aggregateTypes": [] },
+        { "name": "cone_count", "displayName": "", "type": "INTEGER", "description": "Traffic cones detected", "unit": "", "aggregateTypes": [] },
+        { "name": "excavator_present", "displayName": "", "type": "STRING", "description": "Excavator in view (true/false)", "unit": "", "aggregateTypes": [] },
+        { "name": "ppe_compliant", "displayName": "", "type": "STRING", "description": "All workers have hard hats (true/false)", "unit": "", "aggregateTypes": [] },
+        { "name": "person_in_danger_zone", "displayName": "", "type": "STRING", "description": "A person is within the machine proximity margin (true/false)", "unit": "", "aggregateTypes": [] },
+        { "name": "safety_alert", "displayName": "", "type": "STRING", "description": "Composed alert text, or 'clear'", "unit": "", "aggregateTypes": [] },
+        { "name": "hazard_detected", "displayName": "", "type": "STRING", "description": "VLM safety verdict (true/false)", "unit": "", "aggregateTypes": [] },
+        { "name": "vlm_scene", "displayName": "", "type": "STRING", "description": "VLM natural-language description / answer", "unit": "", "aggregateTypes": [] },
+        { "name": "vlm_device", "displayName": "", "type": "STRING", "description": "Where the VLM is running", "unit": "", "aggregateTypes": [] },
+        { "name": "vlm_model", "displayName": "", "type": "STRING", "description": "Active VLM model (changes with set-vlm)", "unit": "", "aggregateTypes": [] },
+        { "name": "vlm_latency_s", "displayName": "", "type": "DECIMAL", "description": "Last VLM response time (seconds)", "unit": "", "aggregateTypes": [] },
+        { "name": "detector_device", "displayName": "", "type": "STRING", "description": "Where the detector is running", "unit": "", "aggregateTypes": [] },
+        { "name": "cloud_connected", "displayName": "", "type": "STRING", "description": "Self-reported cloud link health (true/false)", "unit": "", "aggregateTypes": [] },
+        { "name": "class_counts", "displayName": "", "type": "STRING", "description": "Per-class counts (raw JSON)", "unit": "", "aggregateTypes": [] },
+        { "name": "cpu_percent", "displayName": "", "type": "DECIMAL", "description": "CPU utilization %", "unit": "", "aggregateTypes": [] },
+        { "name": "mem_used_mb", "displayName": "", "type": "INTEGER", "description": "RAM used (MB)", "unit": "", "aggregateTypes": [] },
+        { "name": "mem_total_mb", "displayName": "", "type": "INTEGER", "description": "RAM total (MB)", "unit": "", "aggregateTypes": [] },
+        { "name": "mem_percent", "displayName": "", "type": "DECIMAL", "description": "RAM used %", "unit": "", "aggregateTypes": [] },
+        { "name": "soc_temp_c", "displayName": "", "type": "DECIMAL", "description": "SoC package temperature C", "unit": "", "aggregateTypes": [] },
+        { "name": "gpu_freq_mhz", "displayName": "", "type": "INTEGER", "description": "iGPU current frequency (MHz)", "unit": "", "aggregateTypes": [] },
+        { "name": "gpu_freq_pct", "displayName": "", "type": "DECIMAL", "description": "iGPU freq vs max (activity proxy)", "unit": "", "aggregateTypes": [] },
+        { "name": "npu_busy_pct", "displayName": "", "type": "DECIMAL", "description": "NPU utilization %", "unit": "", "aggregateTypes": [] },
+        { "name": "npu_freq_mhz", "displayName": "", "type": "INTEGER", "description": "NPU current frequency (MHz)", "unit": "", "aggregateTypes": [] },
+        { "name": "npu_mem_mb", "displayName": "", "type": "DECIMAL", "description": "NPU-allocated memory (MB)", "unit": "", "aggregateTypes": [] },
+        { "name": "location", "displayName": "", "type": "LATLONG", "description": "Device location 'lat,lon'", "unit": "", "aggregateTypes": [] }
+    ],
+    "commands": [
+        { "name": "set-prompt", "command": "set-prompt", "requiredParam": true, "requiredAck": true, "isOTACommand": false },
+        { "name": "set-vlm", "command": "set-vlm", "requiredParam": true, "requiredAck": true, "isOTACommand": false },
+        { "name": "capture", "command": "capture", "requiredParam": false, "requiredAck": true, "isOTACommand": false },
+        { "name": "ask-vlm", "command": "ask-vlm", "requiredParam": true, "requiredAck": true, "isOTACommand": false }
+    ],
+    "messageVersion": "2.1",
+    "msgCode": "XG4E38B",
+    "capability": "0",
+    "enableCSR": "false",
+    "c2dOnDemand": 0,
+    "properties": {
+        "description": null,
+        "dataFrequency": "5",
+        "fileSupport": false,
+        "certRenewalDay": 0,
+        "enableCSR": false
+    },
+    "_meta": {
+        "version": "2.0"
+    }
+}

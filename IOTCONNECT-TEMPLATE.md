@@ -4,6 +4,11 @@ Reference for setting up the device template in the IOTCONNECT (AWS) console so
 telemetry charts and commands work. Device: `<your-device-id>`, auth: self-signed X.509
 (`at:3`), env `poc`.
 
+> **Just want it set up?** Import the ready-made template instead of adding
+> attributes by hand: [`iotc-template/Intel-NUC-VLM-template.json`](iotc-template/Intel-NUC-VLM-template.json)
+> (Devices → Templates → Import Template). The tables here add **gauge ranges**
+> and provisioning detail on top of that.
+
 ## Template basics
 - **Template code / name:** e.g. `nucvlm` / "NUC Physical AI"
 - **Authentication type:** Self-signed certificate (X.509) — matches the cert/key

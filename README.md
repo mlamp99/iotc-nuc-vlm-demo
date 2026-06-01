@@ -81,6 +81,7 @@ app/                 the application (camera → detect+VLM → viewer → telem
   selftest.py        pre-flight checks
 scripts/             install-docker, host-setup, prepare_models, build/ship, S3
 core/                Ubuntu Core notes + setup/readiness + compose override
+iotc-template/       importable /IOTCONNECT device template (attributes + commands)
 dashboards/          importable /IOTCONNECT dashboard(s)
 credentials/         drop your device cert/key/iotcDeviceConfig.json here (git-ignored)
 Dockerfile, docker-compose.yml, .env.example, requirements.txt
@@ -163,11 +164,13 @@ docker compose build
 
 1. **Create an /IOTCONNECT account** if you don't have one:
    https://avnet-iotconnect.github.io/ → *Create an /IOTCONNECT Account*.
-2. **Create a device template:** in the web UI go to **Devices → Device Template →
-   Create Template**. Set **Authentication Type = Self-Signed Certificate**. Add
-   every **attribute** and **command** listed in
-   [`IOTCONNECT-TEMPLATE.md`](IOTCONNECT-TEMPLATE.md) — type each name exactly
-   (they are case-sensitive). Save the template.
+2. **Create the device template — easiest is to import it:** in the web UI go to
+   **Devices → Templates → Import Template** and choose
+   [`iotc-template/Intel-NUC-VLM-template.json`](iotc-template/Intel-NUC-VLM-template.json).
+   It defines all telemetry attributes and commands for you.
+   *(Prefer to build it by hand? Create Template → Authentication Type =
+   Self-Signed Certificate → add every attribute and command from the tables in
+   [section 6](#6-telemetry--commands); names are case-sensitive.)*
 3. **Create the device:** **Devices → Create Device**. Enter a **Unique ID**
    (e.g. `nuc-vlm-01`), select the template you just made, and choose
    **Self-Signed Certificate**.
@@ -292,16 +295,67 @@ docker compose up -d         # start (resumes on the last-used model; auto-start
 
 ## 6. Telemetry & commands
 
-The full, authoritative list of telemetry attributes (with data types and gauge
-ranges) and cloud commands is in **[`IOTCONNECT-TEMPLATE.md`](IOTCONNECT-TEMPLATE.md)**.
-Build your device template from it. Highlights:
+The device template defines these. The fastest way to create it is to **import
+[`iotc-template/Intel-NUC-VLM-template.json`](iotc-template/Intel-NUC-VLM-template.json)**
+(Devices → Templates → Import Template). The tables below are the same definitions
+for reference if you build it by hand — attribute **names are case-sensitive**.
+Recommended dashboard gauge ranges are in
+[`IOTCONNECT-TEMPLATE.md`](IOTCONNECT-TEMPLATE.md).
 
-- **Detections / safety:** `person_count`, `hardhat_count`, `no_hardhat_count`,
-  `vest_count`, `cone_count`, `excavator_present`, `ppe_compliant`,
-  `person_in_danger_zone`, `safety_alert`, `hazard_detected`.
-- **VLM:** `vlm_model`, `vlm_latency_s`, `vlm_scene`, `vlm_device`.
-- **Hardware health:** `cpu_percent`, `mem_used_mb`/`mem_total_mb`/`mem_percent`,
-  `soc_temp_c`, `gpu_freq_mhz`/`gpu_freq_pct`, `npu_busy_pct`/`npu_freq_mhz`/`npu_mem_mb`.
+> **Booleans are sent as lowercase strings** `"true"`/`"false"`, so they are typed
+> **STRING** (not BOOLEAN). Dashboard transforms should compare to lowercase
+> `true`/`false`.
+
+### Telemetry — detection & safety
+| Attribute | Type | Example | Meaning |
+|---|---|---|---|
+| `fps` | DECIMAL | `15.0` | Detector frame rate |
+| `object_count` | INTEGER | `4` | Total objects detected this frame |
+| `person_count` | INTEGER | `2` | People detected |
+| `person_present` | STRING | `true` | Any person in view |
+| `hardhat_count` | INTEGER | `1` | Hard hats detected |
+| `no_hardhat_count` | INTEGER | `1` | Workers without a hard hat (person_count − hats) |
+| `vest_count` | INTEGER | `1` | Safety vests detected |
+| `cone_count` | INTEGER | `3` | Traffic cones detected |
+| `excavator_present` | STRING | `true` | Excavator in view |
+| `ppe_compliant` | STRING | `false` | All workers have hard hats |
+| `person_in_danger_zone` | STRING | `true` | A person is within the machine proximity margin |
+| `safety_alert` | STRING | `worker in machine danger zone` | Composed alert text, or `clear` |
+| `hazard_detected` | STRING | `false` | VLM safety verdict (`HAZARD: YES/NO`) |
+| `class_counts` | STRING | `{"person":2,"hard hat":1}` | Per-class detection counts (raw JSON) |
+
+### Telemetry — VLM
+| Attribute | Type | Example | Meaning |
+|---|---|---|---|
+| `vlm_model` | STRING | `qwen2-vl-2b-int4` | Active VLM model (changes with `set-vlm`) |
+| `vlm_latency_s` | DECIMAL | `10.6` | Last VLM response time (seconds) |
+| `vlm_scene` | STRING | `HAZARD: NO …` | VLM description / answer to a query |
+| `vlm_device` | STRING | `GPU` | Device the VLM runs on |
+| `detector_device` | STRING | `intel:npu` | Device the detector runs on |
+
+### Telemetry — hardware health & connectivity
+| Attribute | Type | Example | Meaning |
+|---|---|---|---|
+| `cpu_percent` | DECIMAL | `12.9` | CPU utilization % |
+| `mem_used_mb` | INTEGER | `18131` | RAM used (MB) — shared pool (also iGPU/NPU memory) |
+| `mem_total_mb` | INTEGER | `32604` | RAM total (MB) |
+| `mem_percent` | DECIMAL | `55.6` | RAM used % |
+| `soc_temp_c` | DECIMAL | `65.0` | SoC package temperature °C (one die: CPU+iGPU+NPU) |
+| `gpu_freq_mhz` | INTEGER | `2500` | iGPU current frequency (MHz) |
+| `gpu_freq_pct` | DECIMAL | `100.0` | iGPU freq vs max — activity proxy |
+| `npu_busy_pct` | DECIMAL | `23.5` | NPU utilization % (real) |
+| `npu_freq_mhz` | INTEGER | `950` | NPU current frequency (MHz) |
+| `npu_mem_mb` | DECIMAL | `100` | NPU-allocated memory (MB) |
+| `cloud_connected` | STRING | `true` | Self-reported cloud link health |
+| `location` | LATLONG | `33.4484,-112.0740` | Device location, if configured / auto-detected |
+
+### Commands (cloud-to-device)
+| Command | Param required | Effect |
+|---|---|---|
+| `ask-vlm` | yes — a question | Set as live prompt + run the VLM now; answer returns in `vlm_scene` |
+| `set-prompt` | yes — prompt text | Change the recurring VLM prompt (no immediate run) |
+| `capture` | no | Run the VLM now with the default safety prompt |
+| `set-vlm` | yes — `2b` or `7b` | Hot-swap the VLM model at runtime (~10–30 s); active model in `vlm_model` |
 
 ---
 
