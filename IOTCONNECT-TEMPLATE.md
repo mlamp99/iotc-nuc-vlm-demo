@@ -45,7 +45,7 @@ Attribute names are **case-sensitive** and must match exactly.
 | `vlm_device`             | STRING             | `"GPU"`          | Device the VLM runs on                           |
 | `detector_device`        | STRING             | `"intel:gpu"`    | Device the detector runs on                      |
 | `cloud_connected`        | STRING             | `true`           | Self-reported cloud link health                  |
-| `location`               | LATLONG            | `33.4484,-112.0740` | Device location, if configured (DEVICE_LAT/LON) or IP-auto-detected |
+| `location`               | LATLONG            | `[33.4484,-112.0740]` | Device location, if configured (DEVICE_LAT/LON) or IP-auto-detected |
 
 Live payload reference:
 ```json

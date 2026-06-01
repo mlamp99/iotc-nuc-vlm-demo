@@ -1,5 +1,8 @@
-"""Device location for /IOTCONNECT, formatted as a LATLONG attribute value
-("latitude,longitude" string — what IOTCONNECT/AWS map widgets expect).
+"""Device location for /IOTCONNECT, emitted as a LATLONG attribute value.
+
+IOTCONNECT's LATLONG type needs a numeric value, NOT a quoted string — a quoted
+"lat,lon" is treated as a plain string and won't map. So this returns a two-number
+array [latitude, longitude] (serializes to JSON as [33.0173, -96.612], no quotes).
 
 Resolution order:
   1. Explicit DEVICE_LAT + DEVICE_LON (best for a fixed install — exact & private).
@@ -22,8 +25,11 @@ class Location:
     def __init__(self, lat: str, lon: str, autodetect: bool):
         self._value = None
         if lat and lon:
-            self._value = f"{lat},{lon}"
-            log.info("Device location (configured): %s", self._value)
+            try:
+                self._value = [float(lat), float(lon)]
+                log.info("Device location (configured): %s", self._value)
+            except ValueError:
+                log.warning("Invalid DEVICE_LAT/DEVICE_LON: %r, %r", lat, lon)
         elif autodetect:
             self._value = self._ip_lookup()
             if self._value:
@@ -35,7 +41,7 @@ class Location:
             with urllib.request.urlopen("http://ip-api.com/json/", timeout=5) as r:
                 d = json.loads(r.read().decode())
             if d.get("status") == "success" and "lat" in d and "lon" in d:
-                return f"{d['lat']},{d['lon']}"
+                return [float(d["lat"]), float(d["lon"])]
             log.warning("IP geolocation returned no fix")
         except Exception as e:  # noqa: BLE001
             log.warning("IP geolocation failed: %s", e)
@@ -43,5 +49,5 @@ class Location:
 
     @property
     def value(self):
-        """LATLONG string 'lat,lon', or None if no location is available."""
+        """LATLONG value [lat, lon] (numbers), or None if no location available."""
         return self._value

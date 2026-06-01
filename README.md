@@ -347,7 +347,7 @@ Recommended dashboard gauge ranges are in
 | `npu_freq_mhz` | INTEGER | `950` | NPU current frequency (MHz) |
 | `npu_mem_mb` | DECIMAL | `100` | NPU-allocated memory (MB) |
 | `cloud_connected` | STRING | `true` | Self-reported cloud link health |
-| `location` | LATLONG | `33.4484,-112.0740` | Device location, if configured / auto-detected |
+| `location` | LATLONG | `[33.4484,-112.0740]` | Device location, if configured / auto-detected |
 
 ### Commands (cloud-to-device)
 | Command | Param required | Effect |
