@@ -73,25 +73,15 @@ _PAGE = b"""<!doctype html><html><head><title>Physical AI Demo</title>
    catch(e){}
    setTimeout(pollAnswer,1500);
  }
- // Frame-polling preview: works in every browser incl. embedded webviews
- // (unlike multipart MJPEG). ~10 fps. /stream is also available for smooth
- // viewing in full browsers.
+ // Frame-polling preview using the browser's NATIVE image loader (no fetch /
+ // blob URLs, which behave inconsistently across browsers and over the LAN).
+ // Each frame loads as a plain <img>; onload chains the next request, which also
+ // self-throttles to the network speed. Works in every browser/webview.
  const cam=document.getElementById('cam');
- let lastUrl=null;
- async function pollFrame(){
-   try{
-     const r=await fetch('/frame?t='+Date.now());
-     if(r.ok){
-       const b=await r.blob();
-       const url=URL.createObjectURL(b);
-       cam.src=url;
-       if(lastUrl)URL.revokeObjectURL(lastUrl);
-       lastUrl=url;
-     }
-   }catch(e){}
-   setTimeout(pollFrame,100);
- }
- pollFrame();
+ function nextFrame(){ cam.src='/frame?t='+Date.now(); }
+ cam.onload  = function(){ setTimeout(nextFrame, 80);  };   // ~12 fps when fast
+ cam.onerror = function(){ setTimeout(nextFrame, 500); };   // retry slower on error/503
+ nextFrame();
  pollAnswer();
 </script>
 </body></html>"""

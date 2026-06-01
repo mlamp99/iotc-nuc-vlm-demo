@@ -50,6 +50,11 @@ class Config:
     # (falls back NPU->GPU->CPU if the NPU user-space/driver is unavailable).
     detector_device: str = _get("DETECTOR_DEVICE", "intel:npu")
     detector_conf: float = _get_float("DETECTOR_CONF", 0.25)
+    # Temporal smoothing: hold a detection for N frames after it briefly drops,
+    # so labels (e.g. hard hats near the confidence threshold) don't flicker
+    # on/off. ~8 frames ≈ 0.5 s at 15 FPS. Set 0 to disable.
+    detector_smooth_ttl: int = _get_int("DETECTOR_SMOOTH_TTL", 8)
+    detector_smooth_iou: float = _get_float("DETECTOR_SMOOTH_IOU", 0.3)
     # Person↔machinery proximity margin for the danger-zone flag, as a fraction
     # of frame size (0.05 = 5%).
     danger_margin: float = _get_float("DANGER_MARGIN", 0.05)

@@ -78,6 +78,56 @@ class Detector:
         return dets
 
 
+def _iou(a: Detection, b: Detection) -> float:
+    ix1, iy1 = max(a.x1, b.x1), max(a.y1, b.y1)
+    ix2, iy2 = min(a.x2, b.x2), min(a.y2, b.y2)
+    iw, ih = max(0, ix2 - ix1), max(0, iy2 - iy1)
+    inter = iw * ih
+    if inter <= 0:
+        return 0.0
+    area_a = (a.x2 - a.x1) * (a.y2 - a.y1)
+    area_b = (b.x2 - b.x1) * (b.y2 - b.y1)
+    return inter / float(area_a + area_b - inter)
+
+
+class Smoother:
+    """Temporal smoothing so detections don't flicker on/off frame-to-frame.
+
+    Each frame, new detections are matched to recent ones by class + IoU. A
+    recent detection that isn't matched this frame is kept (its box held in
+    place) for up to `ttl` frames before being dropped — so an object whose
+    confidence dips below the threshold for a frame or two stays visible.
+    """
+
+    def __init__(self, ttl: int, iou_thresh: float):
+        self.ttl = ttl
+        self.iou_thresh = iou_thresh
+        self._tracks: list[dict] = []
+
+    def update(self, dets: list[Detection]) -> list[Detection]:
+        if self.ttl <= 0:
+            return dets
+        for t in self._tracks:
+            t["matched"] = False
+        for d in dets:
+            best, best_iou = None, self.iou_thresh
+            for t in self._tracks:
+                if t["matched"] or t["det"].label != d.label:
+                    continue
+                i = _iou(d, t["det"])
+                if i >= best_iou:
+                    best_iou, best = i, t
+            if best is not None:
+                best["det"], best["ttl"], best["matched"] = d, self.ttl, True
+            else:
+                self._tracks.append({"det": d, "ttl": self.ttl, "matched": True})
+        for t in self._tracks:
+            if not t["matched"]:
+                t["ttl"] -= 1
+        self._tracks = [t for t in self._tracks if t["ttl"] > 0]
+        return [t["det"] for t in self._tracks]
+
+
 def summarize(dets: list[Detection]) -> dict:
     """Compact, telemetry-friendly summary: counts per class + person flag."""
     counts: dict[str, int] = {}

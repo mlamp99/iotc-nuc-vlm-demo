@@ -28,7 +28,7 @@ from app.config import CONFIG
 from app import credentials, safety
 from app.sysmon import SysMon
 from app.location import Location
-from app.detector import Detector
+from app.detector import Detector, Smoother
 from app.iotc import IotcClient
 from app.viewer import MjpegServer
 from app.vlm import VlmManager
@@ -245,6 +245,7 @@ def main():
 
     log.info("Loading detector...")
     detector = Detector(CONFIG.detector_model, CONFIG.detector_device, CONFIG.detector_conf)
+    smoother = Smoother(CONFIG.detector_smooth_ttl, CONFIG.detector_smooth_iou)
     log.info("Loading VLM (this can take a moment)...")
     vlm = VlmManager(
         CONFIG.vlm_model, CONFIG.vlm_device, CONFIG.vlm_max_new_tokens,
@@ -290,6 +291,7 @@ def main():
                 state.stop.wait(0.1)
                 continue
             dets = detector.infer(frame)
+            dets = smoother.update(dets)  # hold detections briefly to stop flicker
             analysis = safety.analyze(dets, frame.shape[1], frame.shape[0], CONFIG.danger_margin)
 
             now = time.monotonic()
