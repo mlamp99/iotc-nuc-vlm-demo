@@ -26,6 +26,18 @@ target device only needs the host kernel drivers and the camera.
 > **Also supported:** Intel **NUC15** (Core Ultra "Arrow Lake") on **Ubuntu Core**
 > — see [section 4](#4-ubuntu-core--whats-different).
 
+## Dashboard
+
+![/IOTCONNECT dashboard](docs/images/dashboard.png)
+
+The /IOTCONNECT dashboard pulls it all together: the live **On Device View**,
+**PPE / danger-zone / person / hazard** status tiles, **resource** gauges (SoC
+temp, CPU, memory), **performance** gauges (VLM latency, FPS), **workload** gauges
+(NPU %/freq/mem, GPU freq/%), a per-class **trend chart**, a **device-command**
+panel, the **SET VLM** 2B/7B switch, and the device **location map**. Import it
+from [`dashboards/`](dashboards/) and the device template from
+[`iotc-template/`](iotc-template/).
+
 ---
 
 ## Contents
@@ -83,6 +95,7 @@ scripts/             install-docker, host-setup, prepare_models, build/ship, S3
 core/                Ubuntu Core notes + setup/readiness + compose override
 iotc-template/       importable /IOTCONNECT device template (attributes + commands)
 dashboards/          importable /IOTCONNECT dashboard(s)
+docs/images/         screenshots used by this README
 credentials/         drop your device cert/key/iotcDeviceConfig.json here (git-ignored)
 Dockerfile, docker-compose.yml, .env.example, requirements.txt
 IOTCONNECT-TEMPLATE.md   full telemetry + command reference (build your template from this)
@@ -290,6 +303,35 @@ docker compose logs -f       # watch detections / VLM answers / telemetry
 docker compose down          # stop
 docker compose up -d         # start (resumes on the last-used model; auto-starts on boot)
 ```
+
+### 2B vs 7B — same scene, different depth
+The VLM is switchable at runtime, so you can show the speed-vs-quality trade-off
+live on the same construction scene.
+
+**Qwen2-VL-2B** (fast, ~5 s/answer):
+
+![2B answer](docs/images/viewer-2b.png)
+
+> "The image shows a construction site where four workers are involved in various
+> activities. One worker is lying on the ground, possibly injured or in distress.
+> The other three workers are helping to attend to the injured worker. It is
+> important to ensure the safety of all workers and to provide immediate medical
+> attention if necessary."
+
+**Qwen2.5-VL-7B** (sharper, ~10–30 s/answer):
+
+![7B answer](docs/images/viewer-7b.png)
+
+> "The image shows a group of construction workers at a site. One worker appears
+> to be kneeling and possibly assisting another worker who is seated on the
+> ground. The worker on the ground seems to be in distress, as indicated by the
+> posture and the way the others are attending to them. It appears that there is a
+> concern for the worker's well-being, but it is not clear from the image alone
+> whether there is immediate danger. The presence of safety equipment and the
+> actions of the workers suggest that they are attending to the situation."
+
+The 7B model reasons more carefully about intent and uncertainty; the 2B model is
+quicker and more direct.
 
 ---
 
