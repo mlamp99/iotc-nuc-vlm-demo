@@ -10,7 +10,10 @@
 # devices. Defaults below match typical Ubuntu installs.
 services:
   physical-ai:
-    image: physical-ai-demo:latest
+    # Prebuilt public image — `docker compose pull` fetches it (no build needed).
+    # Building from source (docker compose build) tags the local image with this
+    # same name, so `up` uses whichever you have.
+    image: ghcr.io/mlamp99/physical-ai-demo:latest
     build:
       context: .
       dockerfile: Dockerfile

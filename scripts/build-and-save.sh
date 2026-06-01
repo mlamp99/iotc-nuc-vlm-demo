@@ -10,7 +10,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-IMAGE="physical-ai-demo:latest"
+IMAGE="ghcr.io/mlamp99/physical-ai-demo:latest"   # matches docker-compose.yml
 SHIP="$ROOT/ship"
 mkdir -p "$SHIP"
 

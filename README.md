@@ -73,8 +73,13 @@ from [`dashboards/`](dashboards/) and the device template from
 - **Docker Engine + Compose** (installed by the included script).
 
 ### /IOTCONNECT
-- An **Avnet /IOTCONNECT** account (AWS). Don't have one? Start here:
-  **https://avnet-iotconnect.github.io/** → *Create an /IOTCONNECT Account*.
+- An **Avnet /IOTCONNECT** account (AWS). No account yet? A **free trial** with an
+  AWS backend is available, directly from iotconnect.io or via the AWS Marketplace:
+  - **Option #1 (Recommended)** — [/IOTCONNECT via AWS Marketplace](https://github.com/avnet-iotconnect/avnet-iotconnect.github.io/blob/main/documentation/iotconnect/subscription/iotconnect_aws_marketplace.md): 60-day trial; AWS account creation required.
+  - **Option #2** — [/IOTCONNECT via iotconnect.io](https://subscription.iotconnect.io/subscribe?cloud=aws): 30-day trial; no credit card required.
+
+  > **Note:** Check your SPAM folder for the temporary password after registering.
+  > See the [/IOTCONNECT Subscription Information](https://github.com/avnet-iotconnect/avnet-iotconnect.github.io/tree/main/documentation/iotconnect/subscription) for more details on the trial.
 
 ---
 
@@ -162,8 +167,7 @@ Change these lines, then save with **Ctrl+O, Enter, Ctrl+X**:
 ### Step 6 — Get the app image — pick ONE
 **6a — Pull the prebuilt image (fastest, recommended):**
 ```bash
-docker pull ghcr.io/mlamp99/physical-ai-demo:latest
-docker tag  ghcr.io/mlamp99/physical-ai-demo:latest physical-ai-demo:latest
+docker compose pull
 ```
 **6b — OR build it yourself** (downloads + converts the AI models; ~20–40 min,
 needs ~30 GB free disk):
@@ -175,8 +179,13 @@ docker compose build
 ### Step 7 — Create your device in /IOTCONNECT
 *(Skip this and Step 8 if you set `IOTC_ENABLED=0` in Step 5.)*
 
-1. **Create an /IOTCONNECT account** if you don't have one:
-   https://avnet-iotconnect.github.io/ → *Create an /IOTCONNECT Account*.
+1. **Create an /IOTCONNECT account** if you don't have one. A free trial with an
+   AWS backend is available directly from iotconnect.io or via the AWS Marketplace:
+   - **Option #1 (Recommended)** — [/IOTCONNECT via AWS Marketplace](https://github.com/avnet-iotconnect/avnet-iotconnect.github.io/blob/main/documentation/iotconnect/subscription/iotconnect_aws_marketplace.md): 60-day trial; AWS account creation required.
+   - **Option #2** — [/IOTCONNECT via iotconnect.io](https://subscription.iotconnect.io/subscribe?cloud=aws): 30-day trial; no credit card required.
+
+   > **Note:** Check your SPAM folder for the temporary password after registering.
+   > See the [/IOTCONNECT Subscription Information](https://github.com/avnet-iotconnect/avnet-iotconnect.github.io/tree/main/documentation/iotconnect/subscription) for more details on the trial.
 2. **Create the device template — easiest is to import it:** in the web UI go to
    **Devices → Templates → Import Template** and choose
    [`iotc-template/Intel-NUC-VLM-template.json`](iotc-template/Intel-NUC-VLM-template.json).
@@ -417,13 +426,18 @@ detection stays smooth while the VLM thinks.
 
 ## 8. Distributing the image
 
-Building on every device is fine, but for fleets you can build once and ship the
-image:
+The default path is the **public GHCR image** (`docker compose pull`) — nothing to
+distribute. For fleets or offline/air-gapped sites you can also:
+- **Registry:** `scripts/push-image.sh` publishes the image; devices just
+  `docker compose pull` (this is what the prebuilt image already uses).
 - **Tarball (offline):** `bash scripts/build-and-save.sh` → `ship/physical-ai-demo.tar.gz`
-  → copy to the device → `docker load < physical-ai-demo.tar.gz`.
+  → copy to the device → `docker load < physical-ai-demo.tar.gz` → `docker compose up -d`
+  (the loaded image already matches the compose `image:` name).
 - **S3:** `scripts/push-to-s3.sh` (build machine) + `scripts/fetch-from-s3.sh`
   (device, supports a presigned URL — no AWS creds needed on the device).
-- **Registry:** `scripts/push-image.sh` → devices `docker pull`.
+
+> Forking to your own registry? Change the `image:` in `docker-compose.yml` to your
+> ref and run `REGISTRY=ghcr.io/youruser scripts/push-image.sh`.
 
 ---
 

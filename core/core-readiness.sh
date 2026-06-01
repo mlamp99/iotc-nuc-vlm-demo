@@ -40,9 +40,9 @@ if snap list docker >/dev/null 2>&1; then
 fi
 
 echo "GPU-in-container (if image present):"
-if docker image inspect physical-ai-demo:latest >/dev/null 2>&1; then
+if docker image inspect ghcr.io/mlamp99/physical-ai-demo:latest >/dev/null 2>&1; then
   devs=$(docker run --rm --device /dev/dri:/dev/dri ${rg:+--group-add $rg} \
-           physical-ai-demo:latest \
+           ghcr.io/mlamp99/physical-ai-demo:latest \
            python3 -c "import openvino as ov; print(ov.Core().available_devices)" 2>/dev/null || true)
   echo "    OpenVINO devices in container: ${devs:-<error>}"
   case "$devs" in
@@ -50,7 +50,7 @@ if docker image inspect physical-ai-demo:latest >/dev/null 2>&1; then
     *) bad "container sees no GPU (driver/passthrough issue)" ;;
   esac
 else
-  note "image physical-ai-demo:latest not loaded yet — skipping container GPU test"
+  note "image ghcr.io/mlamp99/physical-ai-demo:latest not loaded yet — skipping container GPU test"
 fi
 
 echo
