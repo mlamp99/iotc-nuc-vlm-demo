@@ -24,17 +24,15 @@ target device only needs the host kernel drivers and the camera.
 > **Tested on:** Intel **NUC16** (Core Ultra "Panther Lake"), **Ubuntu 26.04 LTS
 > Desktop (Resolute Raccoon)**.
 > **Also supported:** Intel **NUC15** (Core Ultra "Arrow Lake") on **Ubuntu Core**
-> — see [Option B](#option-b--ubuntu-core-nuc-15).
+> — see [section 4](#4-ubuntu-core--whats-different).
 
 ---
 
 ## Contents
 1. [Requirements](#1-requirements)
 2. [Repository layout](#2-repository-layout)
-3. [Set up /IOTCONNECT](#3-set-up-iotconnect)
-4. [Build & run the device](#4-build--run-the-device)
-   - [Option A — Ubuntu Desktop / Server (recommended)](#option-a--ubuntu-desktop--server-recommended)
-   - [Option B — Ubuntu Core (NUC 15)](#option-b--ubuntu-core-nuc-15)
+3. [Step-by-step setup (Ubuntu Desktop / Server)](#3-step-by-step-setup-ubuntu-desktop--server)
+4. [Ubuntu Core — what's different](#4-ubuntu-core--whats-different)
 5. [Using the demo](#5-using-the-demo)
 6. [Telemetry & commands](#6-telemetry--commands)
 7. [Performance](#7-performance-verified-on-hardware)
@@ -56,8 +54,8 @@ target device only needs the host kernel drivers and the camera.
 - Internet access **on the build machine** (to pull models + base images).
 
 ### Software
-- **Ubuntu 26.04 LTS Desktop or Server** (Resolute Raccoon) — *Option A*, **or**
-  **Ubuntu Core 24** — *Option B*.
+- **Ubuntu 26.04 LTS Desktop or Server** (Resolute Raccoon) — *section 3*, **or**
+  **Ubuntu Core 24** — *section 4*.
 - A recent kernel that exposes the GPU (`/dev/dri`) and NPU (`/dev/accel`). Modern
   Ubuntu does this out of the box for Core Ultra.
 - **Docker Engine + Compose** (installed by the included script).
@@ -91,158 +89,173 @@ IOTCONNECT-TEMPLATE.md   full telemetry + command reference (build your template
 
 ---
 
-## 3. Set up /IOTCONNECT
+## 3. Step-by-step setup (Ubuntu Desktop / Server)
 
-You can do this before or after building — the demo also runs fully offline
-(`IOTC_ENABLED=0`), but to see cloud telemetry do the following once.
+Nothing is assumed — do every step in order, on the NUC. *(For Ubuntu Core, do
+section 4 instead.) Tested on NUC16 Panther Lake, Ubuntu 26.04 Desktop.*
 
-### 3.1 Create a device template
-In the /IOTCONNECT web UI: **Devices → Device Template → Create Template**.
-- **Authentication type:** *Self-Signed Certificate (X.509)*.
-- **Attributes & Commands:** add the attributes and commands exactly as listed in
-  [`IOTCONNECT-TEMPLATE.md`](IOTCONNECT-TEMPLATE.md) (names are case-sensitive).
-  That file documents all telemetry fields (detections, safety flags, VLM latency,
-  CPU/GPU/NPU/temp) and the `ask-vlm` / `set-prompt` / `capture` / `set-vlm`
-  commands.
+### Before you start, make sure you have:
+- An Intel NUC (Core Ultra) with **Ubuntu 26.04 Desktop or Server** installed and
+  powered on.
+- A **USB camera** plugged into the NUC.
+- The NUC **connected to the internet** (Ethernet or Wi-Fi).
+- Either use the NUC's own browser, or a laptop/phone on the **same network** to
+  view the video.
 
-### 3.2 Create the device
-**Devices → Create Device.**
-- **Unique ID / Name:** e.g. `nuc-vlm-01`.
-- **Template:** the one from 3.1.
-- **Authentication:** Self-Signed Certificate. Either let /IOTCONNECT generate a
-  key pair + certificate for you to download, or generate one yourself:
-  ```bash
-  openssl req -x509 -newkey rsa:2048 -nodes -days 3650 \
-    -keyout nuc-vlm-01.pem -out nuc-vlm-01.crt -subj "/CN=nuc-vlm-01"
-  ```
-  and upload `nuc-vlm-01.crt`.
+### Step 1 — Open a terminal
+On Desktop press **Ctrl + Alt + T**. On Server, log in at the console.
 
-### 3.3 Download the credentials
-From the device's **Info / Connection** panel, download **`iotcDeviceConfig.json`**.
-Then place these three files in the repo's `credentials/` folder (filenames don't
-matter — they're auto-detected):
+### Step 2 — Install git and download the project
+```bash
+sudo apt update
+sudo apt install -y git
+git clone https://github.com/mlamp99/iotc-nuc-vlm-demo.git
+cd iotc-nuc-vlm-demo
 ```
-credentials/
-├── iotcDeviceConfig.json
-├── nuc-vlm-01.crt
-└── nuc-vlm-01.pem
-```
-> One device = one identity. Each physical NUC needs its **own** device + certs.
+Every command after this is run from inside the `iotc-nuc-vlm-demo` folder.
 
-### 3.4 Import the dashboard (optional, recommended)
-Import [`dashboards/nuc-vlm-dashboard.json`](dashboards/) — see
-[`dashboards/README.md`](dashboards/README.md). Bind it to your device and set the
-**On Device View** URL to `http://<your-device-ip>:8080/`.
+### Step 3 — Install Docker
+```bash
+sudo bash scripts/install-docker.sh
+newgrp docker                  # turns on Docker for this terminal (or log out/in once)
+docker run --rm hello-world    # should print "Hello from Docker!"
+```
+
+### Step 4 — Install the Intel GPU / NPU drivers
+```bash
+sudo bash scripts/host-setup.sh
+```
+**Write down** the two numbers it prints at the end — you need them in Step 5:
+```
+RENDER_GID=...
+VIDEO_GID=...
+```
+
+### Step 5 — Create and edit your settings file
+```bash
+cp .env.example .env
+nano .env
+```
+Change these lines, then save with **Ctrl+O, Enter, Ctrl+X**:
+- `RENDER_GID=` → the RENDER_GID number from Step 4
+- `VIDEO_GID=` → the VIDEO_GID number from Step 4
+- `CAMERA_SOURCE=0` → leave as `0`; try `1` or `2` if you have more than one camera
+- *(optional, for the map)* set `DEVICE_LAT=` and `DEVICE_LON=` to exact
+  coordinates, **or** set `GEO_AUTODETECT=1` for an approximate IP-based location
+- *(optional, no cloud)* set `IOTC_ENABLED=0` to run with no /IOTCONNECT at all,
+  and skip Steps 7–8
+
+### Step 6 — Get the app image — pick ONE
+**6a — Pull the prebuilt image (fastest, recommended):**
+```bash
+docker pull ghcr.io/mlamp99/physical-ai-demo:latest
+docker tag  ghcr.io/mlamp99/physical-ai-demo:latest physical-ai-demo:latest
+```
+**6b — OR build it yourself** (downloads + converts the AI models; ~20–40 min,
+needs ~30 GB free disk):
+```bash
+bash scripts/prepare_models.sh     # add BUILD_VLM_7B=0 in front to skip the large 7B model
+docker compose build
+```
+
+### Step 7 — Create your device in /IOTCONNECT
+*(Skip this and Step 8 if you set `IOTC_ENABLED=0` in Step 5.)*
+
+1. **Create an /IOTCONNECT account** if you don't have one:
+   https://avnet-iotconnect.github.io/ → *Create an /IOTCONNECT Account*.
+2. **Create a device template:** in the web UI go to **Devices → Device Template →
+   Create Template**. Set **Authentication Type = Self-Signed Certificate**. Add
+   every **attribute** and **command** listed in
+   [`IOTCONNECT-TEMPLATE.md`](IOTCONNECT-TEMPLATE.md) — type each name exactly
+   (they are case-sensitive). Save the template.
+3. **Create the device:** **Devices → Create Device**. Enter a **Unique ID**
+   (e.g. `nuc-vlm-01`), select the template you just made, and choose
+   **Self-Signed Certificate**.
+4. **Get a certificate + key.** Either let /IOTCONNECT generate them for you to
+   download, **or** make your own in the terminal and upload the `.crt`:
+   ```bash
+   openssl req -x509 -newkey rsa:2048 -nodes -days 3650 \
+     -keyout nuc-vlm-01.pem -out nuc-vlm-01.crt -subj "/CN=nuc-vlm-01"
+   ```
+5. **Download `iotcDeviceConfig.json`** from the device's **Info / Connection**
+   panel.
+
+### Step 8 — Put the credentials on the NUC
+Copy the **three** files into the `credentials/` folder (the filenames don't
+matter — they're detected automatically):
+```bash
+cp /path/to/iotcDeviceConfig.json  credentials/
+cp /path/to/nuc-vlm-01.crt         credentials/
+cp /path/to/nuc-vlm-01.pem         credentials/
+```
+> Each physical NUC needs its **own** /IOTCONNECT device + its own certificate.
+> Don't reuse one device's credentials on another unit.
+
+### Step 9 — Run the pre-flight check
+```bash
+docker compose run --rm physical-ai python3 -m app.selftest
+```
+You want the critical checks **green**: OpenVINO `GPU` (and `NPU`) present, the
+models found, and the camera capturing. Credential lines will warn if you skipped
+the cloud — that's fine.
+
+### Step 10 — Start the demo
+```bash
+docker compose up -d
+```
+
+### Step 11 — Open the viewer
+Find the NUC's IP address:
+```bash
+hostname -I        # e.g. 192.168.1.50
+```
+- On the NUC itself: open **http://localhost:8080**
+- From another device on the network: open **http://<that-IP>:8080**
+
+You should see the live camera with detection boxes, a safety banner, and an
+"ask a question" box.
+
+### Step 12 — Confirm cloud data (if you set up /IOTCONNECT)
+```bash
+docker compose logs -f      # look for the line: "IOTCONNECT connected." — Ctrl+C to stop watching
+```
+Then in /IOTCONNECT, open your device's **Live Data** to see the telemetry arriving.
+
+### Step 13 — Import the dashboard (optional)
+In /IOTCONNECT: **Dashboards → Create Dashboard → Import**, choose
+[`dashboards/nuc-vlm-dashboard.json`](dashboards/), bind it to your device, and set
+the **On Device View** widget URL to `http://<NUC-IP>:8080/`. Details:
+[`dashboards/README.md`](dashboards/README.md).
+
+### Everyday commands
+```bash
+docker compose logs -f     # watch detections / VLM answers / telemetry
+docker compose down        # stop the demo
+docker compose up -d       # start it again (auto-starts on boot too)
+```
 
 ---
 
-## 4. Build & run the device
-
-### Quick start — pull the prebuilt image (skip the build)
-A prebuilt public image is published to GitHub Container Registry, so a device
-can skip model conversion + build entirely. **The image runs on both Ubuntu
-Desktop/Server and Ubuntu Core** — only the host setup differs (apt scripts vs the
-docker snap), so follow the matching option below and replace its *build* steps
-with this pull:
-```bash
-docker pull ghcr.io/mlamp99/physical-ai-demo:latest
-docker tag  ghcr.io/mlamp99/physical-ai-demo:latest physical-ai-demo:latest
-```
-
-**On Ubuntu Desktop / Server** — do [Option A](#option-a--ubuntu-desktop--server-recommended)
-steps 0–3, then the pull above, then `docker compose up -d`:
-```bash
-git clone https://github.com/mlamp99/iotc-nuc-vlm-demo.git && cd iotc-nuc-vlm-demo
-sudo bash scripts/install-docker.sh          # then: newgrp docker
-sudo bash scripts/host-setup.sh              # Intel GPU/NPU drivers; note the GIDs
-cp .env.example .env                          # set RENDER_GID / VIDEO_GID / CAMERA_SOURCE
-docker pull ghcr.io/mlamp99/physical-ai-demo:latest
-docker tag  ghcr.io/mlamp99/physical-ai-demo:latest physical-ai-demo:latest
-# put your IOTCONNECT files in ./credentials, then:
-docker compose up -d                          # http://<device-ip>:8080
-```
-
-**On Ubuntu Core** — do [Option B](#option-b--ubuntu-core-nuc-15) host setup, then
-pull instead of build:
-```bash
-git clone https://github.com/mlamp99/iotc-nuc-vlm-demo.git && cd iotc-nuc-vlm-demo
-bash core/core-readiness.sh                    # confirm the kernel exposes the GPU
-sudo bash core/core-setup.sh                   # docker snap + interfaces + workdir
-docker pull ghcr.io/mlamp99/physical-ai-demo:latest
-docker tag  ghcr.io/mlamp99/physical-ai-demo:latest physical-ai-demo:latest
-mkdir -p ~/physical-ai/credentials && cp credentials/* ~/physical-ai/  # your IOTCONNECT files
-CORE_WORKDIR=$HOME/physical-ai \
-  docker compose -f docker-compose.yml -f core/docker-compose.core.yml up -d
-```
-Prefer to build it yourself? Use [Option A](#option-a--ubuntu-desktop--server-recommended)
-or [Option B](#option-b--ubuntu-core-nuc-15) in full.
-
-### Option A — Ubuntu Desktop / Server (recommended)
-*(Tested: NUC16 Panther Lake, Ubuntu 26.04 Desktop.)*
-
-Run these on the NUC. Each script is safe to re-run.
-
-```bash
-# 0. Clone
-git clone https://github.com/mlamp99/iotc-nuc-vlm-demo.git
-cd iotc-nuc-vlm-demo
-
-# 1. Install Docker (then log out/in once, or run: newgrp docker)
-sudo bash scripts/install-docker.sh
-
-# 2. Install the Intel GPU/NPU host drivers; note the printed RENDER_GID / VIDEO_GID
-sudo bash scripts/host-setup.sh
-
-# 3. Configure
-cp .env.example .env
-nano .env            # set RENDER_GID, VIDEO_GID, CAMERA_SOURCE (usually 0)
-
-# 4. Download + convert the models into ./models  (one-time, online)
-#    Builds: construction detector, COCO fallback, Qwen2-VL-2B, Qwen2.5-VL-7B.
-#    Skip the large 7B model with:  BUILD_VLM_7B=0 bash scripts/prepare_models.sh
-bash scripts/prepare_models.sh
-
-# 5. Build the image (bakes in models + Intel GPU/NPU runtime)
-docker compose build
-
-# 6. Pre-flight check — expect GPU + NPU + camera + models all green
-docker compose run --rm physical-ai python3 -m app.selftest
-
-# 7. Run it
-docker compose up -d
-```
-Open **`http://localhost:8080`** (or `http://<nuc-ip>:8080` from another machine).
-Telemetry starts flowing to /IOTCONNECT immediately.
-
-### Option B — Ubuntu Core (NUC 15)
+## 4. Ubuntu Core — what's different
 
 Ubuntu Core is the immutable, snap-based edition (good for locked-down appliances
-and OTA). The build is the same image; the host bring-up differs. **Full guide:**
-[`core/CORE-NOTES.md`](core/CORE-NOTES.md).
+and OTA updates). The **app image is identical** — only the host setup changes.
+Full notes: [`core/CORE-NOTES.md`](core/CORE-NOTES.md).
 
-```bash
-git clone https://github.com/mlamp99/iotc-nuc-vlm-demo.git
-cd iotc-nuc-vlm-demo
+Do the **same steps as section 3**, with these substitutions:
 
-# 0. Confirm the kernel exposes the GPU/NPU on Core (the key prerequisite)
-bash core/core-readiness.sh        # must report GPU present
+| Section 3 step | On Ubuntu Core, do this instead |
+|---|---|
+| Step 3 — Install Docker (`install-docker.sh`) | `sudo bash core/core-setup.sh` (installs the **docker snap**, connects interfaces, creates `~/physical-ai`) |
+| Step 4 — Install drivers (`host-setup.sh`) | **not needed** — drivers come from the Core **kernel snap**. First run `bash core/core-readiness.sh` and confirm it reports **GPU present** (this is the key prerequisite). |
+| Step 5 — `.env` | put `.env` at `~/physical-ai/.env` |
+| Step 8 — credentials | put them in `~/physical-ai/credentials/` |
+| Step 10 — Run | `CORE_WORKDIR=$HOME/physical-ai docker compose -f docker-compose.yml -f core/docker-compose.core.yml up -d` |
 
-# 1. Install the docker snap + connect interfaces + make the working dir
-sudo bash core/core-setup.sh
-
-# 2. Build models + image (on the device, or load a prebuilt image — see §8)
-bash scripts/prepare_models.sh
-docker compose build
-
-# 3. Put credentials + .env under the Core working dir, then run with the override
-mkdir -p ~/physical-ai/credentials && cp credentials/* ~/physical-ai/
-CORE_WORKDIR=$HOME/physical-ai \
-  docker compose -f docker-compose.yml -f core/docker-compose.core.yml up -d
-```
-> On Ubuntu Core the **kernel snap** must include the Intel GPU (`xe`/`i915`) and
-> NPU (`intel_vpu`) drivers + firmware. `core/core-readiness.sh` checks this in one
-> command — settle it first. If the NPU is absent, the detector falls back to the
-> iGPU automatically.
+Steps 2, 6, 7, 9, 11–13 are the same. If `core/core-readiness.sh` does **not**
+report a GPU, the kernel snap is missing the Intel `xe`/`intel_vpu` drivers —
+fix that first (see `core/CORE-NOTES.md`). Without the NPU the detector falls back
+to the iGPU automatically.
 
 ---
 
