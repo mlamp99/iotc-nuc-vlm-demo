@@ -59,6 +59,11 @@ COPY models /app/models
 # Credentials are NOT baked into the image — they are mounted at runtime
 # (see compose) so the image stays shareable without leaking secrets.
 
+# Link this image to its source repo on GitHub (shows the package on the repo,
+# and lets GHCR inherit the repo's README/visibility).
+LABEL org.opencontainers.image.source="https://github.com/mlamp99/iotc-nuc-vlm-demo"
+LABEL org.opencontainers.image.description="Physical AI Construction VLM — Intel NUC + OpenVINO + /IOTCONNECT"
+
 EXPOSE 8080
 
 # Default to the demo; override with `python3 -m app.selftest` for pre-flight.
