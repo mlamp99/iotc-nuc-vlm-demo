@@ -33,14 +33,21 @@ VIDEO_GID=...
 ```
 If it says the NPU driver is missing, that's fine — the demo uses the GPU.
 
-## 3. Load the app image
+## 3. Get the app image
 
-**Option A — local tarball:**
+**Option A — pull from GitHub Container Registry (easiest, public, no build):**
+```bash
+docker pull ghcr.io/mlamp99/physical-ai-demo:latest
+docker tag  ghcr.io/mlamp99/physical-ai-demo:latest physical-ai-demo:latest
+```
+(The `tag` line names it what `docker-compose.yml` expects. Free to pull, no auth.)
+
+**Option B — local tarball:**
 ```bash
 docker load < physical-ai-demo.tar.gz
 ```
 
-**Option B — fetch from S3** (good when you don't want to copy a 7 GB file by
+**Option C — fetch from S3** (good when you don't want to copy a 7 GB file by
 hand). On the build machine: `S3_URI=s3://your-bucket/physical-ai/ PRESIGN=1 bash
 scripts/push-to-s3.sh`. Then on the device:
 ```bash
