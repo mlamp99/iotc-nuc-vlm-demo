@@ -101,6 +101,9 @@ class Config:
     # Lightweight MJPEG stream so any device on the LAN can watch in a browser.
     mjpeg_enabled: bool = _get_bool("MJPEG_ENABLED", True)
     mjpeg_port: int = _get_int("MJPEG_PORT", 8080)
+    # Extra blank space (px) at the top of the viewer page — handy when embedding
+    # it in a dashboard widget whose header would otherwise clip the video.
+    viewer_top_pad: int = _get_int("VIEWER_TOP_PAD", 0)
     # Also pop a local OpenCV window (needs an X server / display passthrough).
     show_window: bool = _get_bool("SHOW_WINDOW", False)
 

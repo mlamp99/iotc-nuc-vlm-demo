@@ -37,10 +37,10 @@ _STORE = _FrameStore()
 # Hooks wired up by MjpegServer.start(): ask(question)->None, answer()->str.
 _HOOKS: dict = {"ask": None, "answer": None}
 
-_PAGE = b"""<!doctype html><html><head><title>Physical AI Demo</title>
+_PAGE_TEMPLATE = """<!doctype html><html><head><title>Physical AI Demo</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
- body{margin:0;background:#111;color:#eee;font-family:sans-serif;text-align:center}
+ body{margin:0;padding-top:__PAD__px;background:#111;color:#eee;font-family:sans-serif;text-align:center}
  h2{padding:8px;margin:0}
  img{max-width:100%;height:auto;background:#000}
  .bar{display:flex;gap:6px;max-width:900px;margin:8px auto;padding:0 8px}
@@ -85,6 +85,15 @@ _PAGE = b"""<!doctype html><html><head><title>Physical AI Demo</title>
  pollAnswer();
 </script>
 </body></html>"""
+
+
+def _build_page(top_pad: int) -> bytes:
+    return _PAGE_TEMPLATE.replace("__PAD__", str(int(top_pad))).encode("utf-8")
+
+
+# Default page (no extra top padding); MjpegServer.start() rebuilds it with the
+# configured VIEWER_TOP_PAD so the feed clears an embedding dashboard's header.
+_PAGE = _build_page(0)
 
 
 class _Handler(BaseHTTPRequestHandler):
@@ -163,7 +172,9 @@ class MjpegServer:
         self.port = port
         self._server: ThreadingHTTPServer | None = None
 
-    def start(self, ask_cb=None, answer_cb=None) -> None:
+    def start(self, ask_cb=None, answer_cb=None, top_pad=0) -> None:
+        global _PAGE
+        _PAGE = _build_page(top_pad)
         _HOOKS["ask"] = ask_cb
         _HOOKS["answer"] = answer_cb
         self._server = ThreadingHTTPServer(("0.0.0.0", self.port), _Handler)

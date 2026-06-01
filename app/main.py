@@ -272,7 +272,8 @@ def main():
     viewer = None
     if CONFIG.mjpeg_enabled:
         viewer = MjpegServer(CONFIG.mjpeg_port)
-        viewer.start(ask_cb=web_ask, answer_cb=lambda: state.vlm_text)
+        viewer.start(ask_cb=web_ask, answer_cb=lambda: state.vlm_text,
+                     top_pad=CONFIG.viewer_top_pad)
 
     threading.Thread(target=vlm_worker, args=(state, vlm), daemon=True).start()
     threading.Thread(
