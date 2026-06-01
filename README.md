@@ -141,19 +141,42 @@ Import [`dashboards/nuc-vlm-dashboard.json`](dashboards/) — see
 
 ### Quick start — pull the prebuilt image (skip the build)
 A prebuilt public image is published to GitHub Container Registry, so a device
-can skip steps 4–5 (model conversion + build) entirely:
+can skip model conversion + build entirely. **The image runs on both Ubuntu
+Desktop/Server and Ubuntu Core** — only the host setup differs (apt scripts vs the
+docker snap), so follow the matching option below and replace its *build* steps
+with this pull:
+```bash
+docker pull ghcr.io/mlamp99/physical-ai-demo:latest
+docker tag  ghcr.io/mlamp99/physical-ai-demo:latest physical-ai-demo:latest
+```
+
+**On Ubuntu Desktop / Server** — do [Option A](#option-a--ubuntu-desktop--server-recommended)
+steps 0–3, then the pull above, then `docker compose up -d`:
 ```bash
 git clone https://github.com/mlamp99/iotc-nuc-vlm-demo.git && cd iotc-nuc-vlm-demo
-sudo bash scripts/install-docker.sh         # then: newgrp docker
-sudo bash scripts/host-setup.sh             # Intel GPU/NPU drivers; note the GIDs
-cp .env.example .env                         # set RENDER_GID / VIDEO_GID / CAMERA_SOURCE
-# pull the image and tag it the name compose expects:
+sudo bash scripts/install-docker.sh          # then: newgrp docker
+sudo bash scripts/host-setup.sh              # Intel GPU/NPU drivers; note the GIDs
+cp .env.example .env                          # set RENDER_GID / VIDEO_GID / CAMERA_SOURCE
 docker pull ghcr.io/mlamp99/physical-ai-demo:latest
 docker tag  ghcr.io/mlamp99/physical-ai-demo:latest physical-ai-demo:latest
 # put your IOTCONNECT files in ./credentials, then:
-docker compose up -d                         # http://<device-ip>:8080
+docker compose up -d                          # http://<device-ip>:8080
 ```
-Otherwise, build from source with Option A or B below.
+
+**On Ubuntu Core** — do [Option B](#option-b--ubuntu-core-nuc-15) host setup, then
+pull instead of build:
+```bash
+git clone https://github.com/mlamp99/iotc-nuc-vlm-demo.git && cd iotc-nuc-vlm-demo
+bash core/core-readiness.sh                    # confirm the kernel exposes the GPU
+sudo bash core/core-setup.sh                   # docker snap + interfaces + workdir
+docker pull ghcr.io/mlamp99/physical-ai-demo:latest
+docker tag  ghcr.io/mlamp99/physical-ai-demo:latest physical-ai-demo:latest
+mkdir -p ~/physical-ai/credentials && cp credentials/* ~/physical-ai/  # your IOTCONNECT files
+CORE_WORKDIR=$HOME/physical-ai \
+  docker compose -f docker-compose.yml -f core/docker-compose.core.yml up -d
+```
+Prefer to build it yourself? Use [Option A](#option-a--ubuntu-desktop--server-recommended)
+or [Option B](#option-b--ubuntu-core-nuc-15) in full.
 
 ### Option A — Ubuntu Desktop / Server (recommended)
 *(Tested: NUC16 Panther Lake, Ubuntu 26.04 Desktop.)*
