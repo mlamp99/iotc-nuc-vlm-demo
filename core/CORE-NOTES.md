@@ -1,7 +1,8 @@
 # Running this on Ubuntu Core — notes & starter kit
 
-> **For classic Ubuntu Desktop/Server, use `DEVICE-SETUP.md` instead — this file
-> is only for Ubuntu Core (the immutable, snap-based edition).**
+> **For classic Ubuntu Desktop/Server, use the main `README.md` (section 4,
+> Option A) instead — this file is only for Ubuntu Core (the immutable,
+> snap-based edition).**
 >
 > **Status: untested scaffolding.** These files are a tested-by-design starting
 > point, not a validated deployment. The blocking unknown is always the kernel

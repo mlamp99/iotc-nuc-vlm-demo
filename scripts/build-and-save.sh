@@ -31,7 +31,7 @@ cp -f .env.example "$SHIP/"
 cp -rf scripts "$SHIP/"
 cp -rf core "$SHIP/"
 cp -f IOTCONNECT-TEMPLATE.md "$SHIP/"
-cp -f DEVICE-SETUP.md "$SHIP/README.md" 2>/dev/null || true
+cp -f README.md "$SHIP/README.md" 2>/dev/null || true
 
 cat > "$SHIP/LOAD-ME.txt" <<'EOF'
 1. sudo bash scripts/install-docker.sh     (if Docker isn't installed)

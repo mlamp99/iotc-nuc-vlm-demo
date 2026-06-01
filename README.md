@@ -87,7 +87,6 @@ dashboards/          importable /IOTCONNECT dashboard(s)
 credentials/         drop your device cert/key/iotcDeviceConfig.json here (git-ignored)
 Dockerfile, docker-compose.yml, .env.example, requirements.txt
 IOTCONNECT-TEMPLATE.md   full telemetry + command reference (build your template from this)
-DEVICE-SETUP.md          condensed device-side setup guide
 ```
 
 ---
