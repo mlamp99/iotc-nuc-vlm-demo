@@ -22,11 +22,15 @@ VLM7B_ID="${VLM7B_ID:-Qwen/Qwen2.5-VL-7B-Instruct}"
 VLM7B_DIR="qwen2.5-vl-7b-int4"
 BUILD_VLM_7B="${BUILD_VLM_7B:-1}"
 YOLO_ID="${YOLO_ID:-yolo11n.pt}"
-# Open-vocabulary construction classes baked into the YOLO-World detector at
-# export time. Edit this list (or set CONSTRUCTION_CLASSES) and re-run to change
-# what the detector can see. Keep "person", "hard hat", "safety vest",
-# "excavator" — the safety logic in app/safety.py keys off those names.
-CONSTRUCTION_CLASSES="${CONSTRUCTION_CLASSES:-person,excavator,dump truck,wheel loader,hard hat,safety vest,traffic cone,barrier}"
+# YOLO-World construction detector. The medium model at 800px gives much better
+# recall on small/distant PPE than small@640 (still real-time on the NPU).
+WORLD_MODEL="${WORLD_MODEL:-yolov8m-worldv2.pt}"
+WORLD_IMGSZ="${WORLD_IMGSZ:-800}"
+# Open-vocabulary classes baked into the detector at export time. Synonyms
+# (helmet, reflective vest) widen recall; app/safety.py canonicalizes them back
+# to "hard hat" / "safety vest" and de-dups, so counts stay correct. Keep
+# "person", "hard hat", "safety vest", "excavator" — the safety logic keys off them.
+CONSTRUCTION_CLASSES="${CONSTRUCTION_CLASSES:-person,hard hat,helmet,safety vest,reflective vest,excavator,dump truck,wheel loader,traffic cone,barrier}"
 PREP_IMG="physical-ai-prep:latest"
 
 if ! docker info >/dev/null 2>&1; then
@@ -75,10 +79,10 @@ docker run --rm \
 import shutil
 from ultralytics import YOLOWorld
 classes = [c.strip() for c in '''${CONSTRUCTION_CLASSES}'''.split(',') if c.strip()]
-print('   classes:', classes)
-m = YOLOWorld('yolov8s-worldv2.pt')
+print('   classes:', classes, 'model: ${WORLD_MODEL} @ ${WORLD_IMGSZ}px')
+m = YOLOWorld('${WORLD_MODEL}')
 m.set_classes(classes)
-out = m.export(format='openvino').rstrip('/')
+out = m.export(format='openvino', imgsz=${WORLD_IMGSZ}).rstrip('/')
 shutil.rmtree('/out/construction_openvino_model', ignore_errors=True)
 shutil.move(out, '/out/construction_openvino_model')
 with open('/out/construction_openvino_model/classes.txt', 'w') as f:

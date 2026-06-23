@@ -75,7 +75,36 @@ class Detector:
                     y2=int(xyxy[3]),
                 )
             )
-        return dets
+        return canonicalize(dets)
+
+
+# Open-vocab synonyms -> the canonical class the safety logic keys off. Lets the
+# detector model carry richer prompts (helmet, reflective vest, ...) for better
+# recall while keeping counts correct.
+CANON = {
+    "helmet": "hard hat",
+    "safety helmet": "hard hat",
+    "construction helmet": "hard hat",
+    "hardhat": "hard hat",
+    "reflective vest": "safety vest",
+    "hi-vis vest": "safety vest",
+    "high-visibility vest": "safety vest",
+    "hi vis vest": "safety vest",
+}
+
+
+def canonicalize(dets: list[Detection], iou_thresh: float = 0.55) -> list[Detection]:
+    """Remap synonym labels to canonical names, then drop duplicate boxes of the
+    same canonical label that overlap (the same helmet detected as both
+    'hard hat' and 'helmet' becomes one 'hard hat')."""
+    for d in dets:
+        d.label = CANON.get(d.label, d.label)
+    kept: list[Detection] = []
+    for d in sorted(dets, key=lambda x: x.confidence, reverse=True):
+        if any(k.label == d.label and _iou(k, d) >= iou_thresh for k in kept):
+            continue
+        kept.append(d)
+    return kept
 
 
 def _iou(a: Detection, b: Detection) -> float:
