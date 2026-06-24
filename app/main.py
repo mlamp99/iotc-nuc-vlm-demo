@@ -18,6 +18,7 @@ Cloud-to-device commands (from IOTCONNECT):
 from __future__ import annotations
 
 import logging
+import os
 import signal
 import threading
 import time
@@ -106,15 +107,42 @@ class SharedState:
             }
 
 
-def open_camera():
-    src = CONFIG.camera_source
-    cap_arg = int(src) if src.isdigit() else src
-    cap = cv2.VideoCapture(cap_arg)
+def _open_capture(arg):
+    cap = cv2.VideoCapture(arg)
     # Request MJPG: many USB webcams only deliver high FPS in MJPG mode and drop
     # to ~5 FPS sending raw/uncompressed frames at 720p. Harmless if unsupported.
     cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, CONFIG.frame_width)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CONFIG.frame_height)
+    return cap
+
+
+def _autodetect_camera():
+    """Find the first /dev/videoN that actually delivers a frame. Survives USB
+    cameras whose index shifts across reboots/replugs (esp. multi-node cameras
+    like the Logitech BRIO that expose several /dev/video* nodes)."""
+    import glob
+    indices = sorted(
+        int(os.path.basename(p)[5:])
+        for p in glob.glob("/dev/video*")
+        if os.path.basename(p)[5:].isdigit()
+    ) or list(range(10))
+    for idx in indices:
+        cap = _open_capture(idx)
+        if cap.isOpened():
+            ok, _ = cap.read()
+            if ok:
+                log.info("Auto-selected camera at /dev/video%d", idx)
+                return cap
+        cap.release()
+    raise RuntimeError(f"No working camera found (scanned {indices})")
+
+
+def open_camera():
+    src = (CONFIG.camera_source or "").strip()
+    if src.lower() in ("", "auto"):
+        return _autodetect_camera()
+    cap = _open_capture(int(src) if src.isdigit() else src)
     if not cap.isOpened():
         raise RuntimeError(f"Could not open camera source {src!r}")
     return cap
