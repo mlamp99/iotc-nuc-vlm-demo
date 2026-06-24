@@ -200,6 +200,13 @@ def vlm_worker(state: SharedState, vlm: VlmManager):
         frame = state.get_frame()
         if frame is None:
             continue
+        # Downscale for the VLM (cost scales with pixels; detector keeps full res).
+        m = CONFIG.vlm_max_side
+        if m > 0:
+            h, w = frame.shape[:2]
+            if max(h, w) > m:
+                s = m / float(max(h, w))
+                frame = cv2.resize(frame, (int(w * s), int(h * s)))
         try:
             t0 = time.monotonic()
             text = vlm.describe(frame, state.vlm_prompt)

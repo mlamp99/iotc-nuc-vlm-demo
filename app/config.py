@@ -67,6 +67,9 @@ class Config:
     # OpenVINO device for GenAI: GPU | NPU | CPU | AUTO
     vlm_device: str = _get("VLM_DEVICE", "GPU")
     vlm_max_new_tokens: int = _get_int("VLM_MAX_NEW_TOKENS", 150)
+    # Downscale the frame sent to the VLM so its longest side is <= this (px).
+    # The VLM's cost scales with pixel count; the detector still uses full res.
+    vlm_max_side: int = _get_int("VLM_MAX_SIDE", 1024)
     # Auto-run the VLM on the live scene every N seconds (0 = on-demand only).
     # The VLM and detector share the iGPU, so a longer interval keeps detection
     # FPS smooth between safety checks.
