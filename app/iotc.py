@@ -37,6 +37,37 @@ class _NullClient:
         pass
 
 
+class _GreengrassClient:
+    """Telemetry/command transport over the Greengrass Nucleus via IPC (Phase B).
+
+    Identity (CPID/ENV/DUID and MQTT topics) comes from the Greengrass core
+    device via component configuration / AWS_IOT_THING_NAME — no device cert or
+    iotcDeviceConfig.json is used in this mode. Imports are lazy so the image
+    only needs the greengrass extras when this transport is actually selected.
+    """
+
+    def __init__(self, command_cb):
+        from avnet.iotconnect.sdk.greengrass import Client, Callbacks
+
+        # The SDK opens the IPC connection and subscribes to the C2D topic here.
+        self._client = Client(callbacks=Callbacks(command_cb=command_cb))
+
+    def send_telemetry(self, data: dict) -> None:
+        self._client.send_telemetry(data)
+
+    def is_connected(self) -> bool:
+        # IPC link to the local Nucleus; cloud routing is the Nucleus's job.
+        return True
+
+    def disconnect(self) -> None:
+        fn = getattr(self._client, "disconnect", None)
+        if callable(fn):
+            fn()
+
+    def send_command_ack(self, msg, status, message) -> None:
+        self._client.send_command_ack(msg, status, message)
+
+
 class IotcClient:
     def __init__(
         self,
@@ -45,8 +76,10 @@ class IotcClient:
         pkey_path: str,
         enabled: bool,
         command_handler: CommandHandler | None = None,
+        transport: str = "lite",
     ):
         self._command_handler = command_handler
+        self._transport = (transport or "lite").strip().lower()
         self._lock = threading.Lock()
         self._client = None
 
@@ -55,7 +88,12 @@ class IotcClient:
             return
 
         try:
-            self._client = self._build_real_client(config_json, cert_path, pkey_path)
+            if self._transport == "greengrass":
+                log.info("IOTCONNECT transport: greengrass (Nucleus IPC)")
+                self._client = _GreengrassClient(self._on_command)
+            else:
+                log.info("IOTCONNECT transport: lite (X.509 direct MQTT)")
+                self._client = self._build_real_client(config_json, cert_path, pkey_path)
         except Exception as e:  # noqa: BLE001 - never let cloud setup kill the demo
             log.exception("IOTCONNECT init failed; falling back to local-only")
             self._client = _NullClient(f"init error: {e}")

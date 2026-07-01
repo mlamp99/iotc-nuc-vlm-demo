@@ -1,0 +1,11 @@
+# Extra Python dependencies required ONLY for Phase B (IOTC_TRANSPORT=greengrass),
+# where the app talks to /IOTCONNECT through the Greengrass Nucleus over IPC.
+#
+# These must be baked into the container image to enable the greengrass transport
+# (see app/iotc.py -> _GreengrassClient). Phase A (IOTC_TRANSPORT=lite) does NOT
+# need them — it uses iotconnect-sdk-lite, already in the main requirements.txt.
+#
+# To enable Phase B, add these to the image build (e.g. append to requirements.txt
+# or pip-install them in the Dockerfile), then rebuild/push the image.
+iotconnect-greengrass-sdk<2.0.0
+awsiotsdk<2.0.0

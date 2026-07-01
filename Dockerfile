@@ -37,6 +37,21 @@ WORKDIR /app
 COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Transport SDK selection. The lite SDK (in requirements.txt, default) and the
+# Greengrass SDK CANNOT coexist — both depend on iotconnect-lib at conflicting
+# versions. So we build two image variants from this one Dockerfile:
+#   IOTC_SDK=lite       (default) -> standalone demo, X.509 direct MQTT  -> :latest
+#   IOTC_SDK=greengrass           -> Greengrass component, IPC transport -> :greengrass
+# For the greengrass variant we drop lite and install the greengrass extras
+# (see greengrass/safety-vision/requirements-greengrass.txt). The app picks the
+# matching transport at runtime via IOTC_TRANSPORT (app/iotc.py).
+ARG IOTC_SDK=lite
+COPY greengrass/safety-vision/requirements-greengrass.txt /app/requirements-greengrass.txt
+RUN if [ "$IOTC_SDK" = "greengrass" ]; then \
+        pip uninstall -y iotconnect-sdk-lite paho-mqtt || true; \
+        pip install --no-cache-dir -r requirements-greengrass.txt; \
+    fi
+
 # Intel NPU (AI Boost) user-space: not in Ubuntu repos, so install Intel's
 # release packages. Firmware is loaded host-side by the kernel intel_vpu driver,
 # so only the level-zero backend + driver-compiler are needed here. This lets the

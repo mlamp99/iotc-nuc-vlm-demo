@@ -1,0 +1,98 @@
+---
+RecipeFormatVersion: "2020-01-25"
+ComponentName: "{{COMPONENT_NAME}}"
+ComponentVersion: "{{COMPONENT_VERSION}}"
+ComponentDescription: "/IOTCONNECT Construction Safety Vision (Intel NUC, OpenVINO YOLO + Qwen2-VL)"
+ComponentPublisher: "{{COMPONENT_AUTHOR}}"
+
+# Greengrass manages the Docker lifecycle; the AI workload itself runs as the
+# prebuilt container image (Intel OpenVINO runtime + models baked in).
+ComponentDependencies:
+  aws.greengrass.DockerApplicationManager:
+    VersionRequirement: ">=2.0.0 <3.0.0"
+
+ComponentConfiguration:
+  DefaultConfiguration:
+    # --- /IOTCONNECT identity ------------------------------------------------
+    # Phase B (IOTC_TRANSPORT=greengrass) reads these via IPC; null => the SDK
+    # infers DUID/topics from the core device's AWS_IOT_THING_NAME.
+    IOTC_CPID: null
+    IOTC_ENV: null
+    IOTC_DUID: null
+
+    # --- Transport selector --------------------------------------------------
+    # "lite"       => Phase A: container talks to /IOTCONNECT directly over MQTT
+    #                 using its own X.509 device certs (standalone-demo path).
+    # "greengrass" => Phase B: container talks to /IOTCONNECT THROUGH the
+    #                 Greengrass Nucleus over IPC (telemetry flows under the
+    #                 core device's identity). Requires the greengrass extras in
+    #                 the image and the IPC accessControl policy below.
+    # Defaults to "greengrass": this recipe is only used by the Greengrass
+    # component (which runs the :greengrass image), so operators deploy with no
+    # config needed. The app's own default stays "lite" for the standalone demo
+    # (see app/config.py).
+    IOTC_TRANSPORT: "greengrass"
+
+    # --- App tunables passed through to the container ------------------------
+    DETECTOR_DEVICE: "intel:npu"
+    VLM_DEVICE: "GPU"
+    VLM_INTERVAL_S: "15.0"
+    TELEMETRY_INTERVAL_S: "10.0"
+    MJPEG_PORT: "8080"
+    LOG_LEVEL: "INFO"
+
+    # --- Greengrass IPC access (used by Phase B) ----------------------------
+    # Harmless in Phase A. Lets the component publish/subscribe to IoT Core and
+    # local pub/sub through the Nucleus.
+    accessControl:
+      aws.greengrass.ipc.mqttproxy:
+        "io.iotconnect.example.IotConnectSafetyVision:mqttproxy:1":
+          policyDescription: "Safety vision direct access to /IOTCONNECT IoT Core"
+          operations:
+            - "aws.greengrass#PublishToIoTCore"
+            - "aws.greengrass#SubscribeToIoTCore"
+          resources:
+            - "*"
+      aws.greengrass.ipc.pubsub:
+        "io.iotconnect.example.IotConnectSafetyVision:pubsub:1":
+          policyDescription: "Safety vision local IPC pub/sub"
+          operations:
+            - "aws.greengrass#PublishToTopic"
+            - "aws.greengrass#SubscribeToTopic"
+          resources:
+            - "*"
+
+Manifests:
+  - Platform:
+      os: linux
+      runtime: "*"
+    Artifacts:
+      - Uri: "s3://{{BUCKET_NAME}}/{{COMPONENT_NAME}}/{{VERSION}}/safety-vision.zip"
+        Unarchive: ZIP
+    Lifecycle:
+      # Pull the (public) container image. RequiresPrivilege because we drive
+      # Docker and pass through /dev/dri, /dev/accel and the camera.
+      install:
+        RequiresPrivilege: true
+        Timeout: 1800
+        Script: |
+          bash -x {artifacts:decompressedPath}/safety-vision*/wrapper/component-install.sh
+      # Run in the foreground (no -d) so the Nucleus owns the process lifecycle.
+      run:
+        RequiresPrivilege: true
+        Script: |
+          IOTC_TRANSPORT="{configuration:/IOTC_TRANSPORT}" \
+          IOTC_CPID="{configuration:/IOTC_CPID}" \
+          IOTC_ENV="{configuration:/IOTC_ENV}" \
+          IOTC_DUID="{configuration:/IOTC_DUID}" \
+          DETECTOR_DEVICE="{configuration:/DETECTOR_DEVICE}" \
+          VLM_DEVICE="{configuration:/VLM_DEVICE}" \
+          VLM_INTERVAL_S="{configuration:/VLM_INTERVAL_S}" \
+          TELEMETRY_INTERVAL_S="{configuration:/TELEMETRY_INTERVAL_S}" \
+          MJPEG_PORT="{configuration:/MJPEG_PORT}" \
+          LOG_LEVEL="{configuration:/LOG_LEVEL}" \
+          bash -x {artifacts:decompressedPath}/safety-vision*/wrapper/component-run.sh
+      shutdown:
+        RequiresPrivilege: true
+        Script: |
+          cd {artifacts:decompressedPath}/safety-vision*/wrapper && docker compose -f docker-compose.gg.yml down || true

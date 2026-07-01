@@ -93,6 +93,13 @@ class Config:
     iotc_cert: str = _get("IOTC_CERT", "")
     iotc_pkey: str = _get("IOTC_PKEY", "")
     iotc_enabled: bool = _get_bool("IOTC_ENABLED", True)
+    # Transport for telemetry/commands:
+    #   "lite"       - standalone: X.509 direct MQTT via iotconnect-sdk-lite
+    #                  (the default; used by the standalone Docker demo).
+    #   "greengrass" - through the Greengrass Nucleus over IPC. Set by the
+    #                  Greengrass component (see greengrass/). Requires the
+    #                  greengrass extras baked into the image.
+    iotc_transport: str = _get("IOTC_TRANSPORT", "lite").strip().lower()
     telemetry_interval_s: float = _get_float("TELEMETRY_INTERVAL_S", 10.0)
     # Device location sent as an IOTCONNECT LATLONG attribute ("lat,lon"). Set
     # both for a fixed install; or enable GEO_AUTODETECT for approximate IP-based.

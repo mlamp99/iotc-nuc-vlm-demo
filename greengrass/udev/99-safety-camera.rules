@@ -1,0 +1,5 @@
+# Stable /dev/video0 -> Logitech BRIO RGB capture node for the Safety Vision component.
+# The BRIO exposes index0=RGB (YUYV/MJPG/NV12), index2=IR (GREY 8-bit), plus two
+# metadata nodes. Natural enumeration is unstable (sometimes no /dev/video0), so
+# pin /dev/video0 to the RGB capture node (index 0).
+SUBSYSTEM=="video4linux", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="085e", ATTR{index}=="0", SYMLINK+="video0"

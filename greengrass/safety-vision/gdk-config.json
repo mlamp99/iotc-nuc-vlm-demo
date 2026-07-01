@@ -1,0 +1,24 @@
+{
+  "component": {
+    "io.iotconnect.example.IotConnectSafetyVision": {
+      "author": "Michael Lamp",
+      "version": "1.0.1",
+      "build": {
+        "build_system": "zip",
+        "options": {
+          "excludes": [
+            "images",
+            "images/**",
+            "zip-build",
+            "zip-build/**"
+          ]
+        }
+      },
+      "publish": {
+        "bucket": "iotc-safety-vision",
+        "region": "us-east-1"
+      }
+    }
+  },
+  "gdk_version": "1.0.0"
+}

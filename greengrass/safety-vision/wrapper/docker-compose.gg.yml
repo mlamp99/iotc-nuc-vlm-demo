@@ -1,0 +1,45 @@
+# Greengrass-managed compose for the Safety Vision component.
+#
+# This mirrors the standalone demo's docker-compose.yml (Intel iGPU/NPU + camera
+# passthrough) but adds the env + IPC-socket plumbing the Greengrass component
+# needs. The standalone demo is unaffected — it keeps using its own compose file.
+services:
+  safety-vision:
+    # Greengrass variant of the image (greengrass SDK instead of lite — the two
+    # cannot coexist). Build/push: see scripts/build-greengrass-image.sh.
+    image: ghcr.io/mlamp99/physical-ai-demo:greengrass
+    container_name: physical-ai-gg
+    restart: unless-stopped
+    ports:
+      - "${MJPEG_PORT:-8080}:8080"
+    devices:
+      - /dev/dri:/dev/dri       # Intel iGPU (VLM)
+      - /dev/accel:/dev/accel   # Intel NPU  (detector)
+      - /dev/video0:/dev/video0 # USB camera
+    environment:
+      # Transport + identity (set by the recipe / component configuration)
+      IOTC_TRANSPORT: "${IOTC_TRANSPORT:-lite}"
+      IOTC_CPID: "${IOTC_CPID:-}"
+      IOTC_ENV: "${IOTC_ENV:-}"
+      IOTC_DUID: "${IOTC_DUID:-}"
+      # App tunables
+      DETECTOR_DEVICE: "${DETECTOR_DEVICE:-intel:npu}"
+      VLM_DEVICE: "${VLM_DEVICE:-GPU}"
+      VLM_INTERVAL_S: "${VLM_INTERVAL_S:-15.0}"
+      TELEMETRY_INTERVAL_S: "${TELEMETRY_INTERVAL_S:-10.0}"
+      MJPEG_PORT: "${MJPEG_PORT:-8080}"
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+      # --- Phase B: Greengrass Nucleus IPC passthrough ---------------------
+      # Forwarded by component-run.sh. Unused when IOTC_TRANSPORT=lite.
+      AWS_GG_NUCLEUS_DOMAIN_SOCKET_FILEPATH_FOR_COMPONENT: "${GG_IPC_SOCKET:-}"
+      SVCUID: "${SVCUID:-}"
+      AWS_IOT_THING_NAME: "${AWS_IOT_THING_NAME:-}"
+      AWS_REGION: "${AWS_REGION:-}"
+    volumes:
+      # Phase A: the device certs live here (same convention as the demo).
+      #   credentials/iotcDeviceConfig.json + <device>.crt + <device>.pem
+      - "/var/iotconnect/safety-vision/credentials:/app/credentials:ro"
+      # Phase B: bind the Nucleus IPC socket into the container at the SAME path
+      # the env var advertises, so the greengrass SDK can connect. Falls back to
+      # /dev/null in Phase A so the mount is always valid.
+      - "${GG_IPC_SOCKET:-/dev/null}:${GG_IPC_SOCKET:-/dev/null}"

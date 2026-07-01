@@ -296,6 +296,7 @@ def main():
         pkey_path=pkey,
         enabled=CONFIG.iotc_enabled,
         command_handler=make_command_handler(state),
+        transport=CONFIG.iotc_transport,
     )
 
     def web_ask(question: str):
