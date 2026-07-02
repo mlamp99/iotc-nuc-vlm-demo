@@ -26,6 +26,14 @@ target device only needs the host kernel drivers and the camera.
 > **Also supported:** Intel **NUC15** (Core Ultra "Arrow Lake") on **Ubuntu Core**
 > — see [section 4](#4-ubuntu-core--whats-different).
 
+> **Two ways to deploy:**
+> 1. **Standalone Docker Compose** — this README. The app connects to /IOTCONNECT
+>    directly over MQTT with its own device certs.
+> 2. **AWS Greengrass component** (managed/OTA-deployed by /IOTCONNECT) — the same
+>    container, run by a Greengrass core device, publishing telemetry through the
+>    Greengrass Nucleus over IPC under the core device's identity. See
+>    [`greengrass/`](greengrass/README.md) for the full setup.
+
 ## Dashboard
 
 ![/IOTCONNECT dashboard](docs/images/dashboard.png)
@@ -98,6 +106,7 @@ app/                 the application (camera → detect+VLM → viewer → telem
   selftest.py        pre-flight checks
 scripts/             install-docker, host-setup, prepare_models, build/ship, S3
 core/                Ubuntu Core notes + setup/readiness + compose override
+greengrass/          deploy as an AWS Greengrass component (IOTCONNECT-managed) — see greengrass/README.md
 iotc-template/       importable /IOTCONNECT device template (attributes + commands)
 dashboards/          importable /IOTCONNECT dashboard(s)
 docs/images/         screenshots used by this README
