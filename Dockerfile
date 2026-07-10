@@ -66,6 +66,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends wget libtbb12 \
     && dpkg -i intel-level-zero-npu*.deb intel-driver-compiler-npu*.deb \
     && rm -rf /tmp/*.deb /tmp/*.tar.gz /tmp/npu.tgz /var/lib/apt/lists/*
 
+# MCP client for cross-device hazard actions (app/hazard_actions.py talks to
+# the host's iotc-mcp-server). Own layer, after the slow NPU/dep layers, so
+# adding it didn't bust their cache.
+RUN pip install --no-cache-dir mcp
+
 # Application code and pre-converted models (baked in so nothing downloads at
 # the venue). prepare_models.sh must have populated ./models before building.
 COPY app /app/app

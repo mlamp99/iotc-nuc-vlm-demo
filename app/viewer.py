@@ -47,8 +47,9 @@ _PAGE_TEMPLATE = """<!doctype html><html><head><title>Physical AI Demo</title>
  #q{flex:1;padding:10px;font-size:16px;border-radius:6px;border:1px solid #444;background:#222;color:#eee}
  button{padding:10px 16px;font-size:16px;border:0;border-radius:6px;background:#2d7;color:#012;cursor:pointer}
  #ans{max-width:900px;margin:8px auto;padding:10px;background:#1b1b1b;border-radius:6px;
-      min-height:2em;text-align:left;color:#0ff;white-space:pre-wrap}
- .hint{color:#888;font-size:13px}
+      min-height:2em;text-align:left;color:#0ff;white-space:pre-wrap;
+      font-size:20px;line-height:1.35}
+ .hint{color:#888;font-size:15px}
 </style></head>
 <body>
  <h2>NUC Physical AI &mdash; live perception</h2>

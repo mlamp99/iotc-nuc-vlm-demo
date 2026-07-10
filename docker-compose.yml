@@ -30,6 +30,10 @@ services:
     group_add:
       - "${RENDER_GID:-993}"   # render group (GPU)
       - "${VIDEO_GID:-44}"     # video group (camera)
+    extra_hosts:
+      # Lets the container reach services on the host (e.g. the local
+      # iotc-mcp-server used by the hazard-actions bridge).
+      - "host.docker.internal:host-gateway"
     volumes:
       # Credentials mounted at runtime — never baked into the image.
       - ./credentials:/app/credentials:ro

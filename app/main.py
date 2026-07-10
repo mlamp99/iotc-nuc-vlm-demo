@@ -114,6 +114,14 @@ def _open_capture(arg):
     cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, CONFIG.frame_width)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CONFIG.frame_height)
+    # UVC settings are volatile (lost on camera power cycle), so re-apply the
+    # configured framing on every open instead of relying on v4l2-ctl.
+    if CONFIG.camera_zoom:
+        cap.set(cv2.CAP_PROP_ZOOM, CONFIG.camera_zoom)
+    if CONFIG.camera_pan:
+        cap.set(cv2.CAP_PROP_PAN, CONFIG.camera_pan)
+    if CONFIG.camera_tilt:
+        cap.set(cv2.CAP_PROP_TILT, CONFIG.camera_tilt)
     return cap
 
 
@@ -130,10 +138,15 @@ def _autodetect_camera():
     for idx in indices:
         cap = _open_capture(idx)
         if cap.isOpened():
-            ok, _ = cap.read()
-            if ok:
-                log.info("Auto-selected camera at /dev/video%d", idx)
-                return cap
+            # The first frame after the MJPG mode switch can take a moment on
+            # some cameras (e.g. the BRIO) — retry briefly before rejecting the
+            # node, or a single slow frame kills the app into a restart loop.
+            for _ in range(10):
+                ok, _ = cap.read()
+                if ok:
+                    log.info("Auto-selected camera at /dev/video%d", idx)
+                    return cap
+                time.sleep(0.2)
         cap.release()
     raise RuntimeError(f"No working camera found (scanned {indices})")
 
@@ -149,6 +162,10 @@ def open_camera():
 
 
 def draw_overlay(frame, dets, analysis, fps, vlm_text):
+    # OVERLAY_SCALE grows all burned-in text (banner, labels, VLM line) so the
+    # stream stays readable when embedded small, e.g. in a dashboard widget.
+    s = max(0.5, CONFIG.overlay_scale)
+    th = max(1, round(s))
     for d in dets:
         if d.label == "person":
             color = (0, 0, 255)
@@ -159,18 +176,20 @@ def draw_overlay(frame, dets, analysis, fps, vlm_text):
         cv2.rectangle(frame, (d.x1, d.y1), (d.x2, d.y2), color, 2)
         cv2.putText(
             frame, f"{d.label} {d.confidence:.2f}", (d.x1, max(0, d.y1 - 6)),
-            cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1, cv2.LINE_AA,
+            cv2.FONT_HERSHEY_SIMPLEX, 0.5 * s, color, th, cv2.LINE_AA,
         )
     alert = analysis["safety_alert"]
     danger = alert != "clear" or analysis["person_in_danger_zone"]
     banner = f"FPS {fps:4.1f} | persons {analysis['person_count']} | SAFETY: {alert.upper()}"
     bar_color = (0, 0, 200) if danger else (0, 0, 0)
-    cv2.rectangle(frame, (0, 0), (frame.shape[1], 28), bar_color, -1)
-    cv2.putText(frame, banner, (8, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1, cv2.LINE_AA)
-    # Wrap the VLM scene text along the bottom.
-    text = (vlm_text or "")[:160]
-    cv2.rectangle(frame, (0, frame.shape[0] - 26), (frame.shape[1], frame.shape[0]), (0, 0, 0), -1)
-    cv2.putText(frame, text, (8, frame.shape[0] - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1, cv2.LINE_AA)
+    cv2.rectangle(frame, (0, 0), (frame.shape[1], int(28 * s)), bar_color, -1)
+    cv2.putText(frame, banner, (8, int(20 * s)), cv2.FONT_HERSHEY_SIMPLEX,
+                0.6 * s, (255, 255, 255), th, cv2.LINE_AA)
+    # VLM scene text along the bottom (fewer chars fit as the font grows).
+    text = (vlm_text or "")[: int(160 / s)]
+    cv2.rectangle(frame, (0, frame.shape[0] - int(26 * s)), (frame.shape[1], frame.shape[0]), (0, 0, 0), -1)
+    cv2.putText(frame, text, (8, frame.shape[0] - int(8 * s)), cv2.FONT_HERSHEY_SIMPLEX,
+                0.5 * s, (0, 255, 255), th, cv2.LINE_AA)
     return frame
 
 
@@ -316,7 +335,25 @@ def main():
         target=telemetry_worker, args=(state, iotc, vlm, detector.device), daemon=True
     ).start()
 
+    if CONFIG.hazard_actions_enabled and CONFIG.hazard_light_duid:
+        from app.hazard_actions import HazardActions
+        HazardActions(
+            state,
+            mcp_url=CONFIG.mcp_url,
+            duid=CONFIG.hazard_light_duid,
+            command=CONFIG.hazard_light_command,
+            source=CONFIG.hazard_source,
+            off_delay_s=CONFIG.hazard_off_delay_s,
+            on_args=CONFIG.hazard_light_on_args,
+            off_args=CONFIG.hazard_light_off_args,
+        ).start()
+
     cap = open_camera()
+    rotate = {
+        90: cv2.ROTATE_90_CLOCKWISE,
+        180: cv2.ROTATE_180,
+        270: cv2.ROTATE_90_COUNTERCLOCKWISE,
+    }.get(CONFIG.camera_rotate % 360)
     log.info("Entering capture loop. Ctrl-C to stop.")
     prev = time.monotonic()
     fps = 0.0
@@ -327,6 +364,8 @@ def main():
                 log.warning("Camera read failed; retrying...")
                 state.stop.wait(0.1)
                 continue
+            if rotate is not None:
+                frame = cv2.rotate(frame, rotate)
             dets = detector.infer(frame)
             dets = smoother.update(dets)  # hold detections briefly to stop flicker
             analysis = safety.analyze(dets, frame.shape[1], frame.shape[0], CONFIG.danger_margin)

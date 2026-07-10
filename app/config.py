@@ -39,6 +39,18 @@ class Config:
     camera_source: str = _get("CAMERA_SOURCE", "0")
     frame_width: int = _get_int("FRAME_WIDTH", 1280)
     frame_height: int = _get_int("FRAME_HEIGHT", 720)
+    # Rotate captured frames (0, 90, 180, 270 degrees clockwise) — for cameras
+    # mounted sideways/upside-down. Applied before detection/VLM/viewer. A 180
+    # rotation needs no extra mirroring (it flips both axes; text stays readable).
+    camera_rotate: int = _get_int("CAMERA_ROTATE", 0)
+    # UVC hardware zoom/pan/tilt, applied at camera open (0 = leave default).
+    # These are raw v4l2 control values (BRIO: zoom 100-500 = 1x-5x, pan/tilt in
+    # arc-seconds, step 3600). Set here rather than v4l2-ctl so they survive
+    # camera power cycles. NOTE: pan/tilt act in SENSOR orientation — with
+    # CAMERA_ROTATE=180 the on-screen direction is inverted.
+    camera_zoom: int = _get_int("CAMERA_ZOOM", 0)
+    camera_pan: int = _get_int("CAMERA_PAN", 0)
+    camera_tilt: int = _get_int("CAMERA_TILT", 0)
 
     # --- Object detection (fast path) ----------------------------------
     # Default is the YOLO-World construction model (classes baked in at export
@@ -107,6 +119,24 @@ class Config:
     device_lon: str = _get("DEVICE_LON", "")
     geo_autodetect: bool = _get_bool("GEO_AUTODETECT", False)
 
+    # --- Hazard actions (cross-device C2D via local iotc-mcp-server) -----
+    # When the scene turns hazardous, send `<command> on` to another device
+    # (e.g. an FRDM board's LED as a warning light); `<command> off` after the
+    # scene stays clear for the delay. Needs iotconnect-mcp-server running on
+    # the host (see app/hazard_actions.py). Off unless enabled AND a DUID set.
+    hazard_actions_enabled: bool = _get_bool("HAZARD_ACTIONS_ENABLED", False)
+    # host.docker.internal resolves via extra_hosts in docker-compose.yml.
+    mcp_url: str = _get("MCP_URL", "http://host.docker.internal:8000/mcp")
+    hazard_light_duid: str = _get("HAZARD_LIGHT_DUID", "")
+    hazard_light_command: str = _get("HAZARD_LIGHT_COMMAND", "board-user-led")
+    # Args sent with the command on danger/clear. Defaults suit board-user-led;
+    # for the starter demos' RGB set-user-led use e.g. "255 0 0" / "0 0 0".
+    hazard_light_on_args: str = _get("HAZARD_LIGHT_ON_ARGS", "on")
+    hazard_light_off_args: str = _get("HAZARD_LIGHT_OFF_ARGS", "off")
+    # Which signal trips it: detector (fast rules) | vlm (hazard_detected) | any
+    hazard_source: str = _get("HAZARD_SOURCE", "any")
+    hazard_off_delay_s: float = _get_float("HAZARD_OFF_DELAY_S", 10.0)
+
     # --- Viewer ---------------------------------------------------------
     # Lightweight MJPEG stream so any device on the LAN can watch in a browser.
     mjpeg_enabled: bool = _get_bool("MJPEG_ENABLED", True)
@@ -114,6 +144,9 @@ class Config:
     # Extra blank space (px) at the top of the viewer page — handy when embedding
     # it in a dashboard widget whose header would otherwise clip the video.
     viewer_top_pad: int = _get_int("VIEWER_TOP_PAD", 0)
+    # Multiplier for the text burned into the video (banner, box labels, VLM
+    # line). Raise it when the stream is viewed small (dashboard widget).
+    overlay_scale: float = _get_float("OVERLAY_SCALE", 1.0)
     # Also pop a local OpenCV window (needs an X server / display passthrough).
     show_window: bool = _get_bool("SHOW_WINDOW", False)
 
