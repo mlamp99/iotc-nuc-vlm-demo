@@ -37,7 +37,10 @@ def analyze(dets: list[Detection], frame_w: int, frame_h: int, danger_margin: fl
     hardhat_count = counts.get("hard hat", 0)
     vest_count = counts.get("safety vest", 0)
     cone_count = counts.get("traffic cone", 0)
-    excavator_present = counts.get("excavator", 0) > 0
+    # Any heavy machinery counts (excavator, dump truck, wheel loader, ...) —
+    # the attribute keeps its historical name so existing /IOTCONNECT templates
+    # and dashboards don't need to change.
+    excavator_present = len(equipment) > 0
     # Heuristic: workers not matched to a hard hat.
     no_hardhat_count = max(0, person_count - hardhat_count)
     ppe_compliant = person_count == 0 or hardhat_count >= person_count
