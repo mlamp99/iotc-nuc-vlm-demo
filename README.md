@@ -433,9 +433,9 @@ Recommended dashboard gauge ranges are in
 | Stage | Where | Result |
 |---|---|---|
 | Construction detector | **NPU** | ~124 FPS of headroom (8 ms/frame); frees the iGPU |
-| VLM — Qwen2-VL-2B INT4 | **iGPU** | ~5 s / answer |
-| VLM — Qwen2.5-VL-7B INT4 | **iGPU** | ~20–30 s / answer (sharper) |
-| Live preview | camera-bound | ~15 FPS @ 720p (MJPG); compute is not the limit |
+| VLM — Qwen2-VL-2B INT4 | **iGPU** | ~3 s / answer (with `VLM_MAX_SIDE=1024` downscale) |
+| VLM — Qwen2.5-VL-7B INT4 | **iGPU** | ~7.5–8 s / answer (sharper; was ~35 s before the downscale) |
+| Live preview | camera-bound | ~15–30 FPS (MJPG); compute is not the limit |
 
 Because the detector runs on the NPU and the VLM on the iGPU, they don't contend —
 detection stays smooth while the VLM thinks.

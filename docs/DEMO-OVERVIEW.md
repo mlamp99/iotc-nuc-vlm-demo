@@ -45,15 +45,31 @@ only telemetry, text and commands cross the network.
 
 ## 2. Perception pipeline (all on-device, OpenVINO)
 
-Two models on two different accelerators, so they never contend:
+Two models on two different accelerators, so they never contend. All models
+are baked into the container image (nothing downloads at the venue).
 
-| Stage | Model | Silicon | Rate | Role |
-|---|---|---|---|---|
-| Fast path | YOLO-World v2 (m, 800px), construction classes baked in | **NPU** | ~25-30 FPS | Boxes: person, hard hat, safety vest, excavator, dump truck, wheel loader, traffic cone, barrier (+synonyms canonicalized) |
-| Slow path | Qwen2.5-VL-7B INT4 (2B hot-swappable) | **iGPU** | ~7 s/inference, every 15 s or on demand | Structured judgment: `HAZARD: YES/NO` + one-sentence scene description; free-text Q&A |
+### Models on this NUC — measured 2026-07-11, 1080p capture
 
-A temporal smoother holds flickering detections; frames are downscaled to
-1024px for the VLM only (detector sees full resolution).
+| Model | Type / quant | Runs on (default) | Role | Measured performance | How to select |
+|---|---|---|---|---|---|
+| **YOLO-World v2-m @ 800px**, construction classes baked at export | Open-vocabulary detector, OpenVINO | **NPU** | Fast path: person, hard hat, safety vest, excavator, dump truck, wheel loader, traffic cone, barrier (+synonyms canonicalized/deduped) | ~8 ms/frame (≈124 FPS of NPU headroom); the live pipeline is **camera-bound at ~15-30 FPS** | `DETECTOR_MODEL=/app/models/construction_openvino_model` (default) |
+| YOLO11n (COCO 80 classes) | Generic detector, OpenVINO | NPU | Fallback when generic object detection is wanted (no PPE classes → safety rules degrade) | Smaller than YOLO-World; also far above camera rate | `DETECTOR_MODEL=/app/models/yolo11n_openvino_model` |
+| **Qwen2.5-VL-7B INT4** | Vision-language model, OpenVINO GenAI | **iGPU** | Default judge: `HAZARD: YES/NO` + scene description, free-text Q&A. Noticeably sharper reasoning | **~7.5-8 s / answer** | default; `set-vlm 7b` to return to it |
+| Qwen2-VL-2B INT4 | Vision-language model, OpenVINO GenAI | iGPU | Fast judge for snappier demos; less nuanced answers | **~3 s / answer** steady (~5 s first answer right after a swap) | `set-vlm 2b` cloud command / dashboard toggle |
+
+**Placement options:** detector `DETECTOR_DEVICE=intel:npu|intel:gpu|intel:cpu`
+(falls back NPU→GPU→CPU automatically); VLM `VLM_DEVICE=GPU|NPU|CPU|AUTO`.
+The NPU-detector/iGPU-VLM split is what keeps detection smooth while the VLM
+thinks.
+
+**Knobs that shape VLM latency:** frames are downscaled to `VLM_MAX_SIDE=1024`
+for the VLM only (the 7B was ~35 s/answer at full 1080p before this — a 5×
+win; the detector always sees full resolution); answers are capped at
+`VLM_MAX_NEW_TOKENS=150`. Hot-swapping models (`set-vlm 2b|7b`) takes ~10-30 s
+and detection keeps running throughout.
+
+A temporal smoother holds flickering detections so labels don't strobe near
+the confidence threshold.
 
 ### Safety logic — two independent hazard paths
 
