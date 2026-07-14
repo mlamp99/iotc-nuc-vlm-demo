@@ -357,13 +357,31 @@ def main():
     log.info("Entering capture loop. Ctrl-C to stop.")
     prev = time.monotonic()
     fps = 0.0
+    read_fails = 0
     try:
         while not state.stop.is_set():
             ok, frame = cap.read()
             if not ok:
-                log.warning("Camera read failed; retrying...")
-                state.stop.wait(0.1)
+                read_fails += 1
+                # A few misses are normal; a sustained run means the handle is
+                # dead (USB replug / re-enumeration) — reopen instead of
+                # retrying a stale fd forever.
+                if read_fails >= 50:  # ~5s at the 0.1s retry pace
+                    log.warning("Camera gone (%d failed reads); reopening...", read_fails)
+                    cap.release()
+                    try:
+                        cap = open_camera()
+                        read_fails = 0
+                        log.info("Camera reopened.")
+                    except Exception:  # noqa: BLE001
+                        log.exception("Camera reopen failed; retrying in 5s")
+                        state.stop.wait(5)
+                else:
+                    if read_fails == 1:
+                        log.warning("Camera read failed; retrying...")
+                    state.stop.wait(0.1)
                 continue
+            read_fails = 0
             if rotate is not None:
                 frame = cv2.rotate(frame, rotate)
             dets = detector.infer(frame)
