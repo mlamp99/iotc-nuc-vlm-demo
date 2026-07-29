@@ -1,5 +1,3 @@
-<img src="https://avnet-iotconnect.github.io/img/logos/iotc-w-r-h.png" alt="/IOTCONNECT" width="220"/>
-
 # Physical AI Construction VLM — Intel NUC + OpenVINO + /IOTCONNECT
 
 A self-contained **physical-AI edge demo** for an Intel NUC (Core Ultra, Arc
